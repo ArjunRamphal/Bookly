@@ -28,9 +28,6 @@ import com.example.bookly.ui.BookViewModel
 import com.example.bookly.ui.EpubReaderScreen
 import com.example.bookly.ui.HomeScreen
 import com.example.bookly.ui.PdfReaderScreen
-import java.net.URLDecoder
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,7 +61,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppNavigation(
-    // 1. Inject ViewModel to access DB
     viewModel: BookViewModel = viewModel()
 ) {
     val navController = rememberNavController()
@@ -77,34 +73,43 @@ fun AppNavigation(
         // HOME SCREEN
         composable("home") {
             HomeScreen(
-                // IMPORTANT: You must update your HomeScreen callback to pass the ID too!
-                // onBookClick = { bookId, path, format -> ... }
-                // Assuming you have access to the book object in the loop:
-                onBookClick = { bookId, path, format ->
-                    val encodedPath = URLEncoder.encode(path, StandardCharsets.UTF_8.toString())
-
+                onBookClick = { bookId, encodedPath, format ->
                     if (format.equals("pdf", ignoreCase = true)) {
-                        // PDF route can stay simple for now (or update similarly if needed)
-                        navController.navigate("pdf/$encodedPath")
+                        navController.navigate("pdf/$bookId/$encodedPath")
                     } else {
-                        // 2. Pass the ID in the route
                         navController.navigate("epub/$bookId/$encodedPath")
                     }
                 }
             )
         }
 
-        // PDF READER
+        // PDF READER ROUTE
         composable(
-            route = "pdf/{bookUri}",
-            arguments = listOf(navArgument("bookUri") { type = NavType.StringType })
+            route = "pdf/{bookId}/{bookUri}",
+            arguments = listOf(
+                navArgument("bookId") { type = NavType.IntType },
+                navArgument("bookUri") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
+            val bookId = backStackEntry.arguments?.getInt("bookId") ?: 0
             val encodedUri = backStackEntry.arguments?.getString("bookUri") ?: ""
-            val decodedUri = URLDecoder.decode(encodedUri, StandardCharsets.UTF_8.toString())
-            PdfReaderScreen(uri = Uri.parse(decodedUri))
+
+            val decodedUri = Uri.decode(encodedUri)
+
+            // Get Progress
+            val book = libraryBooks.find { it.id == bookId }
+            val initialProgress = book?.progress ?: 0f
+
+            PdfReaderScreen(
+                uri = Uri.parse(decodedUri),
+                initialProgress = initialProgress,
+                onSaveProgress = { newProgress ->
+                    viewModel.updateBookProgress(bookId, newProgress)
+                }
+            )
         }
 
-        // EPUB READER ROUTE (Updated)
+        // EPUB / TXT READER ROUTE
         composable(
             route = "epub/{bookId}/{bookUri}",
             arguments = listOf(
@@ -114,11 +119,11 @@ fun AppNavigation(
         ) { backStackEntry ->
             val bookId = backStackEntry.arguments?.getInt("bookId") ?: 0
             val encodedUri = backStackEntry.arguments?.getString("bookUri") ?: ""
-            val decodedUri = URLDecoder.decode(encodedUri, StandardCharsets.UTF_8.toString())
 
-            // Get initial progress as Float
+            val decodedUri = Uri.decode(encodedUri)
+
             val book = libraryBooks.find { it.id == bookId }
-            val initialProgress = book?.progress ?: 0f // <--- Float default
+            val initialProgress = book?.progress ?: 0f
 
             EpubReaderScreen(
                 uri = Uri.parse(decodedUri),

@@ -20,4 +20,7 @@ interface BookDao {
 
     @Query("UPDATE books SET progress = :progress WHERE id = :bookId")
     suspend fun updateProgress(bookId: Int, progress: Float)
+
+    @Query("UPDATE books SET title = :title WHERE id = :id")
+    suspend fun updateTitle(id: Int, title: String)
 }

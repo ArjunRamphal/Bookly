@@ -18,4 +18,8 @@ class BookRepository(private val bookDao: BookDao) {
     suspend fun updateProgress(bookId: Int, progress: Float) {
         bookDao.updateProgress(bookId, progress)
     }
+
+    suspend fun renameBook(bookId: Int, newTitle: String) {
+        bookDao.updateTitle(bookId, newTitle)
+    }
 }
