@@ -43,7 +43,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-// --- PDF READER ---
+// --- PDF READER (Unchanged) ---
 @Composable
 fun PdfReaderScreen(
     uri: Uri,
@@ -118,7 +118,7 @@ fun PdfReaderScreen(
     }
 }
 
-// --- EPUB / TXT READER ---
+// --- EPUB / TXT / RTF READER ---
 
 private enum class ScrollTarget {
     TOP, BOTTOM, SAVED
@@ -148,7 +148,7 @@ fun EpubReaderScreen(
     // Restoration State
     var savedScrollFraction by remember { mutableFloatStateOf(0f) }
 
-    // Scroll Target State (Controls where we land on page load)
+    // Scroll Target State
     var scrollTarget by remember { mutableStateOf(ScrollTarget.SAVED) }
 
     // Live Progress (0-100%)
@@ -174,17 +174,26 @@ fun EpubReaderScreen(
     // --- INITIAL LOAD ---
     LaunchedEffect(uri) {
         withContext(Dispatchers.IO) {
-            val isTxt = uri.toString().endsWith("txt", ignoreCase = true)
+            val uriString = uri.toString()
+            val isTxt = uriString.endsWith("txt", ignoreCase = true)
+            // Check for RTF extension
+            val isRtf = uriString.endsWith("rtf", ignoreCase = true)
+
             if (isTxt) {
                 totalChapters = 1
                 htmlContent = EpubUtils.parseTxt(context, uri)
+                savedScrollFraction = initialProgress / 100f
+                isLoading = false
+            } else if (isRtf) {
+                // Handle RTF: Treat as single chapter, use new parser
+                totalChapters = 1
+                htmlContent = EpubUtils.parseRtf(context, uri)
                 savedScrollFraction = initialProgress / 100f
                 isLoading = false
             } else {
                 val chapters = EpubUtils.getChapters(context, uri)
                 totalChapters = chapters.size
 
-                // --- CONVERT 0-100% -> CHAPTER & SCROLL ---
                 if (totalChapters > 0) {
                     val rawIndex = (initialProgress / 100f) * totalChapters
                     currentChapterIndex = rawIndex.toInt().coerceIn(0, totalChapters - 1)
@@ -242,7 +251,6 @@ fun EpubReaderScreen(
                                 }
                             },
                             onJumpTo = { newIndex ->
-                                // Validate and Jump
                                 if (newIndex in 0 until totalChapters) {
                                     scrollTarget = ScrollTarget.TOP
                                     currentChapterIndex = newIndex
@@ -289,7 +297,6 @@ fun EpubReaderScreen(
                                     super.onPageFinished(view, url)
                                     view?.evaluateJavascript(getThemeJs(isDarkMode), null)
 
-                                    // --- SCROLL TARGET LOGIC ---
                                     when (scrollTarget) {
                                         ScrollTarget.TOP -> {
                                             view?.scrollTo(0, 0)
@@ -320,7 +327,6 @@ fun EpubReaderScreen(
                                 }
                             })
 
-                            // TRACK PROGRESS
                             setOnScrollChangeListener { _, _, scrollY, _, _ ->
                                 val totalHeight = (contentHeight * scale).toInt()
                                 val viewportHeight = height
@@ -331,10 +337,12 @@ fun EpubReaderScreen(
                                 if (totalChapters > 0) {
                                     val currentGlobalIndex = currentChapterIndex + scrollFraction.coerceIn(0f, 1f)
                                     globalProgressPercent = (currentGlobalIndex / totalChapters) * 100f
+                                } else if (totalChapters == 1) {
+                                    // For Single Chapter books (TXT/RTF), progress is just the scroll fraction
+                                    globalProgressPercent = scrollFraction * 100f
                                 }
                             }
 
-                            // OVERSCROLL LOGIC
                             setOnTouchListener { v, event ->
                                 gestureDetector.onTouchEvent(event)
                                 when (event.action) {
@@ -344,7 +352,6 @@ fun EpubReaderScreen(
                                         val isAtTop = !v.canScrollVertically(-1)
                                         val currentY = event.y
 
-                                        // Next Chapter (Drag Up)
                                         if (isAtBottom && (dragStartY - currentY) > OVERSCROLL_THRESHOLD) {
                                             if (!isLoading && totalChapters > 1 && currentChapterIndex < totalChapters - 1) {
                                                 scrollTarget = ScrollTarget.TOP
@@ -357,7 +364,6 @@ fun EpubReaderScreen(
                                             }
                                         }
 
-                                        // Prev Chapter (Drag Down)
                                         if (isAtTop && (dragStartY - currentY) < -OVERSCROLL_THRESHOLD) {
                                             if (!isLoading && totalChapters > 1 && currentChapterIndex > 0) {
                                                 scrollTarget = ScrollTarget.BOTTOM
@@ -380,7 +386,6 @@ fun EpubReaderScreen(
                         webView.settings.textZoom = fontSize
                         webView.setBackgroundColor(if (isDarkMode) 0xFF121212.toInt() else 0xFFFFFFFF.toInt())
 
-                        // Prevent reload on theme change by checking content tag
                         if (htmlContent != null && webView.tag != htmlContent) {
                             webView.tag = htmlContent
                             webView.loadDataWithBaseURL(null, htmlContent!!, "text/html", "UTF-8", null)
@@ -400,7 +405,6 @@ fun EpubReaderScreen(
     }
 }
 
-// --- CHAPTER NAV UI ---
 @Composable
 fun ChapterNavigation(
     currentIndex: Int,
@@ -420,7 +424,6 @@ fun ChapterNavigation(
         ) {
             Button(onClick = onPrev, enabled = currentIndex > 0) { Text("Prev") }
 
-            // Clickable Text for Jump
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(4.dp))
@@ -463,7 +466,7 @@ fun ChapterNavigation(
                     onClick = {
                         val num = inputValue.toIntOrNull()
                         if (num != null && num in 1..total) {
-                            onJumpTo(num - 1) // Convert 1-based input to 0-based index
+                            onJumpTo(num - 1)
                             showDialog = false
                         }
                     },
@@ -479,7 +482,6 @@ fun ChapterNavigation(
     }
 }
 
-// --- STATUS BAR ---
 @Composable
 fun ReadingStatusBar(
     progress: Int,
@@ -507,7 +509,6 @@ fun ReadingStatusBar(
     }
 }
 
-// --- CONTROLS UI ---
 @Composable
 fun ReaderControls(
     fontSize: Int,

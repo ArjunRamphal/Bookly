@@ -78,7 +78,6 @@ fun HomeScreen(
         )
     }
 
-    // --- SETTINGS DIALOG ---
     if (showSettingsDialog) {
         AlertDialog(
             onDismissRequest = { showSettingsDialog = false },
@@ -103,7 +102,6 @@ fun HomeScreen(
                     if (importFolder != null) {
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // --- FORMATTING LOGIC: Make URI Readable ---
                         val readablePath = remember(importFolder) {
                             val decoded = Uri.decode(importFolder)
                             when {
@@ -112,7 +110,6 @@ fun HomeScreen(
                                     if (path.isEmpty()) "Internal Storage" else "Internal Storage > $path"
                                 }
                                 decoded.contains("tree/") -> {
-                                    // Handle SD Cards or other providers (Format is usually UUID:Folder)
                                     val raw = decoded.substringAfter("tree/")
                                     if (raw.contains(":")) "SD Card > " + raw.substringAfter(":") else raw
                                 }
@@ -156,7 +153,8 @@ fun HomeScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    fileLauncher.launch(arrayOf("application/pdf", "application/epub+zip", "text/plain"))
+                    // --- Added RTF support ---
+                    fileLauncher.launch(arrayOf("application/pdf", "application/epub+zip", "text/plain", "application/rtf", "text/rtf"))
                 },
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
@@ -194,6 +192,7 @@ fun HomeScreen(
     }
 }
 
+// ... (BookItem and EmptyState remain unchanged) ...
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookItem(
@@ -267,7 +266,6 @@ fun BookItem(
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                         )
 
-                        // Display percentage for all formats
                         if (book.progress > 0) {
                             Text(
                                 text = "${book.progress.toInt()}%",
@@ -280,7 +278,6 @@ fun BookItem(
             }
         }
 
-        // --- CONTEXT MENU ---
         DropdownMenu(
             expanded = showMenu,
             onDismissRequest = { showMenu = false }

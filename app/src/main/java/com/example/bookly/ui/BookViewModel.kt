@@ -85,14 +85,14 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
                 val name = file.name ?: continue
                 val ext = name.substringAfterLast(".", "").lowercase()
 
-                if (ext !in listOf("pdf", "epub", "txt")) continue
+                // --- FIX 1: Add "rtf" to allowed extensions ---
+                if (ext !in listOf("pdf", "epub", "txt", "rtf")) continue
 
                 // 1. Title Check
                 val title = name.substringBeforeLast(".")
                 if (existingBooks.any { it.title.equals(title, ignoreCase = true) }) continue
 
                 // 2. Import (allowOverwrite = false)
-                // This prevents re-importing files that already exist physically
                 finalizeImport(file.uri, name, allowOverwrite = false)
             }
         }
@@ -126,7 +126,6 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
     fun confirmImport() {
         if (pendingUri != null) {
             viewModelScope.launch(Dispatchers.IO) {
-                // User explicitly said "Import Anyway", so we allow overwrite
                 finalizeImport(pendingUri!!, pendingTitle, allowOverwrite = true)
                 pendingUri = null
                 pendingTitle = ""
@@ -146,13 +145,10 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
         try {
             val internalFile = File(context.filesDir, fileName)
 
-            // --- STRICT DUPLICATE CHECK ---
-            // If the file exists and we are NOT allowed to overwrite (e.g. Auto-Import), STOP.
             if (internalFile.exists() && !allowOverwrite) {
                 return
             }
 
-            // Copy file content
             val inputStream = context.contentResolver.openInputStream(uri)
             val outputStream = FileOutputStream(internalFile)
             inputStream?.use { input ->
@@ -161,14 +157,17 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
 
-            // Prepare DB Entry
             val savedPath = "file://${internalFile.absolutePath}"
+
+            // --- FIX 2: Detect RTF format correctly ---
             val format = when {
                 fileName.contains("pdf", ignoreCase = true) -> "pdf"
                 fileName.contains("epub", ignoreCase = true) -> "epub"
                 fileName.contains("txt", ignoreCase = true) -> "txt"
+                fileName.contains("rtf", ignoreCase = true) -> "rtf"
                 else -> "epub"
             }
+
             val title = fileName.substringBeforeLast(".")
 
             var coverPath: String? = null
@@ -177,6 +176,7 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
             } else if (format == "pdf") {
                 coverPath = generatePdfCover(context, uri, title)
             }
+            // TXT and RTF do not typically have extractable covers
 
             val newBook = BookEntity(
                 title = title,
