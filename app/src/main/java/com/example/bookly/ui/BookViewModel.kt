@@ -29,15 +29,25 @@ import kotlinx.coroutines.flow.first
 import java.io.File
 import java.io.FileOutputStream
 
+// 1. Define Sort Options
+enum class SortOption {
+    ALPHABETICAL,
+    DATE_ADDED_DESC,
+    DATE_ADDED_ASC
+}
+
 class BookViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: BookRepository
 
-    // --- SEARCH STATE ---
+    // --- SEARCH & SORT STATE ---
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
 
-    // --- FILTERED BOOKS ---
+    private val _sortOption = MutableStateFlow(SortOption.ALPHABETICAL)
+    val sortOption = _sortOption.asStateFlow()
+
+    // --- FILTERED & SORTED BOOKS ---
     val libraryBooks: StateFlow<List<BookEntity>>
 
     private val prefs = application.getSharedPreferences("bookly_prefs", Context.MODE_PRIVATE)
@@ -48,14 +58,22 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
         val bookDao = BookDatabase.getDatabase(application).bookDao()
         repository = BookRepository(bookDao)
 
-        // Initialize libraryBooks with filtering logic
-        libraryBooks = combine(repository.allBooks, _searchQuery) { books, query ->
-            if (query.isBlank()) {
+        // Combine books, search, and sort
+        libraryBooks = combine(repository.allBooks, _searchQuery, _sortOption) { books, query, sort ->
+            // 1. Filter
+            val filtered = if (query.isBlank()) {
                 books
             } else {
                 books.filter { book ->
                     book.title.contains(query, ignoreCase = true)
                 }
+            }
+
+            // 2. Sort
+            when (sort) {
+                SortOption.ALPHABETICAL -> filtered.sortedBy { it.title.lowercase() }
+                SortOption.DATE_ADDED_DESC -> filtered.sortedByDescending { it.dateAdded }
+                SortOption.DATE_ADDED_ASC -> filtered.sortedBy { it.dateAdded }
             }
         }.stateIn(
             scope = viewModelScope,
@@ -79,9 +97,13 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
     private var pendingUri: Uri? = null
     private var pendingTitle: String = ""
 
-    // --- SEARCH ACTION ---
+    // --- ACTIONS ---
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
+    }
+
+    fun onSortOptionChanged(option: SortOption) {
+        _sortOption.value = option
     }
 
     fun setImportFolder(uri: Uri) {
@@ -110,14 +132,14 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
 
                 if (ext !in listOf("pdf", "epub", "txt", "rtf")) continue
 
-                // 1. Check ignore list (User deleted this before)
+                // Check ignore list
                 if (deletedFiles.contains(name)) continue
 
-                // 2. Title Check
+                // Check duplicates
                 val title = name.substringBeforeLast(".")
                 if (existingBooks.any { it.title.equals(title, ignoreCase = true) }) continue
 
-                // 3. Import
+                // Import
                 finalizeImport(file.uri, name, allowOverwrite = false)
             }
         }
@@ -204,7 +226,8 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
                 title = title,
                 filePath = savedPath,
                 coverImage = coverPath,
-                format = format
+                format = format,
+                dateAdded = System.currentTimeMillis() // Set import time
             )
 
             repository.addBook(newBook)
@@ -236,10 +259,8 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // --- UPDATED DELETE LOGIC ---
     fun deleteBook(book: BookEntity, deleteFromDevice: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
-            // 1. Delete Internal Copy (Always deleted)
             var fileName = ""
             if (book.filePath.startsWith("file://")) {
                 try {
@@ -249,18 +270,14 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
                 } catch (e: Exception) { e.printStackTrace() }
             }
 
-            // 2. Delete Cover (Always deleted)
             if (book.coverImage != null && book.coverImage.startsWith("file://")) {
                 try {
                     File(book.coverImage.removePrefix("file://")).delete()
                 } catch (e: Exception) { e.printStackTrace() }
             }
 
-            // 3. Handle Source File & Ignore List
             if (fileName.isNotEmpty()) {
                 if (deleteFromDevice) {
-                    // OPTION A: Delete the original source file.
-                    // We DO NOT mark as deleted (Ignore list), because the file is gone.
                     _importFolder.value?.let { uriString ->
                         try {
                             val context = getApplication<Application>()
@@ -272,13 +289,10 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 } else {
-                    // OPTION B: Keep source file.
-                    // We MUST mark as deleted so scanner ignores it.
                     repository.markAsDeleted(fileName)
                 }
             }
 
-            // 4. Remove from DB
             repository.deleteBook(book)
         }
     }

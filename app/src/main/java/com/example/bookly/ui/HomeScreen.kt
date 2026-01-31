@@ -50,8 +50,10 @@ fun HomeScreen(
     val books by viewModel.libraryBooks.collectAsState()
     val importFolder by viewModel.importFolder.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val sortOption by viewModel.sortOption.collectAsState()
 
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showFilterMenu by remember { mutableStateOf(false) }
 
     val fileLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -168,33 +170,90 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // --- SEARCH BAR ---
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { viewModel.onSearchQueryChanged(it) },
+            // --- SEARCH BAR & FILTER ROW ---
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Search library...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear search")
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { viewModel.onSearchQueryChanged(it) },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Search library...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear search")
+                            }
                         }
-                    }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    )
                 )
-            )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Box {
+                    FilledTonalIconButton(
+                        onClick = { showFilterMenu = true },
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.FilterList, contentDescription = "Filter")
+                    }
+
+                    DropdownMenu(
+                        expanded = showFilterMenu,
+                        onDismissRequest = { showFilterMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Alphabetical (A-Z)") },
+                            onClick = {
+                                viewModel.onSortOptionChanged(SortOption.ALPHABETICAL)
+                                showFilterMenu = false
+                            },
+                            trailingIcon = {
+                                if (sortOption == SortOption.ALPHABETICAL) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Date Added (Newest)") },
+                            onClick = {
+                                viewModel.onSortOptionChanged(SortOption.DATE_ADDED_DESC)
+                                showFilterMenu = false
+                            },
+                            trailingIcon = {
+                                if (sortOption == SortOption.DATE_ADDED_DESC) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Date Added (Oldest)") },
+                            onClick = {
+                                viewModel.onSortOptionChanged(SortOption.DATE_ADDED_ASC)
+                                showFilterMenu = false
+                            },
+                            trailingIcon = {
+                                if (sortOption == SortOption.DATE_ADDED_ASC) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
 
             if (books.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     if (searchQuery.isNotEmpty()) {
-                        // Empty state for search results
                         Column(
                             modifier = Modifier.align(Alignment.Center),
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -204,7 +263,6 @@ fun HomeScreen(
                             Text("No books found", color = Color.Gray)
                         }
                     } else {
-                        // Empty state for library
                         EmptyState(padding = PaddingValues(0.dp))
                     }
                 }
@@ -212,7 +270,7 @@ fun HomeScreen(
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 128.dp),
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp), // Extra bottom padding for FAB
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -236,12 +294,13 @@ fun HomeScreen(
     }
 }
 
+// ... (BookItem and EmptyState remain unchanged from previous versions)
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookItem(
     book: BookEntity,
     onClick: () -> Unit,
-    onDelete: (Boolean) -> Unit, // Callback takes boolean
+    onDelete: (Boolean) -> Unit,
     onRename: (String) -> Unit,
     onResetProgress: () -> Unit
 ) {
@@ -410,7 +469,6 @@ fun BookItem(
     }
 
     if (showDeleteConfirm) {
-        // --- NEW: Checkbox State ---
         var deleteFromDevice by remember { mutableStateOf(false) }
 
         AlertDialog(
