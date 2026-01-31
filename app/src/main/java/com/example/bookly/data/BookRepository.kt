@@ -22,4 +22,12 @@ class BookRepository(private val bookDao: BookDao) {
     suspend fun renameBook(bookId: Int, newTitle: String) {
         bookDao.updateTitle(bookId, newTitle)
     }
+
+    suspend fun getDeletedFileNames(): List<String> {
+        return bookDao.getDeletedFileNames()
+    }
+
+    suspend fun markAsDeleted(fileName: String) {
+        bookDao.markBookAsDeleted(DeletedBookEntity(fileName))
+    }
 }

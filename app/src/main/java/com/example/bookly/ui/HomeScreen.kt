@@ -49,6 +49,7 @@ fun HomeScreen(
 
     val books by viewModel.libraryBooks.collectAsState()
     val importFolder by viewModel.importFolder.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
 
     var showSettingsDialog by remember { mutableStateOf(false) }
 
@@ -153,7 +154,6 @@ fun HomeScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    // --- Added RTF support ---
                     fileLauncher.launch(arrayOf("application/pdf", "application/epub+zip", "text/plain", "application/rtf", "text/rtf"))
                 },
                 containerColor = MaterialTheme.colorScheme.primary
@@ -163,42 +163,85 @@ fun HomeScreen(
         }
     ) { padding ->
 
-        if (books.isEmpty()) {
-            Box(modifier = Modifier.padding(padding)) {
-                EmptyState(padding = padding)
-            }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 128.dp),
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(books) { book ->
-                    BookItem(
-                        book = book,
-                        onClick = {
-                            val encodedPath = Uri.encode(book.filePath)
-                            onBookClick(book.id, encodedPath, book.format)
-                        },
-                        onDelete = { viewModel.deleteBook(book) },
-                        onRename = { newName -> viewModel.renameBook(book, newName) },
-                        onResetProgress = { viewModel.updateBookProgress(book.id, 0f) }
-                    )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            // --- SEARCH BAR ---
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { viewModel.onSearchQueryChanged(it) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = { Text("Search library...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear search")
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                )
+            )
+
+            if (books.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (searchQuery.isNotEmpty()) {
+                        // Empty state for search results
+                        Column(
+                            modifier = Modifier.align(Alignment.Center),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(Icons.Default.SearchOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.Gray)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("No books found", color = Color.Gray)
+                        }
+                    } else {
+                        // Empty state for library
+                        EmptyState(padding = PaddingValues(0.dp))
+                    }
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 128.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp), // Extra bottom padding for FAB
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(books) { book ->
+                        BookItem(
+                            book = book,
+                            onClick = {
+                                val encodedPath = Uri.encode(book.filePath)
+                                onBookClick(book.id, encodedPath, book.format)
+                            },
+                            onDelete = { deleteFromDevice ->
+                                viewModel.deleteBook(book, deleteFromDevice)
+                            },
+                            onRename = { newName -> viewModel.renameBook(book, newName) },
+                            onResetProgress = { viewModel.updateBookProgress(book.id, 0f) }
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-// ... (BookItem and EmptyState remain unchanged) ...
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookItem(
     book: BookEntity,
     onClick: () -> Unit,
-    onDelete: () -> Unit,
+    onDelete: (Boolean) -> Unit, // Callback takes boolean
     onRename: (String) -> Unit,
     onResetProgress: () -> Unit
 ) {
@@ -367,14 +410,41 @@ fun BookItem(
     }
 
     if (showDeleteConfirm) {
+        // --- NEW: Checkbox State ---
+        var deleteFromDevice by remember { mutableStateOf(false) }
+
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             title = { Text("Delete Book") },
-            text = { Text("Are you sure you want to remove '${book.title}' from your library?") },
+            text = {
+                Column {
+                    Text("Are you sure you want to remove '${book.title}' from your library?")
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .combinedClickable(
+                                onClick = { deleteFromDevice = !deleteFromDevice }
+                            )
+                    ) {
+                        Checkbox(
+                            checked = deleteFromDevice,
+                            onCheckedChange = { deleteFromDevice = it }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Delete file from device",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        onDelete()
+                        onDelete(deleteFromDevice)
                         showDeleteConfirm = false
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)

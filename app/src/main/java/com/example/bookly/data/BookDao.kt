@@ -23,4 +23,10 @@ interface BookDao {
 
     @Query("UPDATE books SET title = :title WHERE id = :id")
     suspend fun updateTitle(id: Int, title: String)
+
+    @Query("SELECT fileName FROM deleted_books")
+    suspend fun getDeletedFileNames(): List<String>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun markBookAsDeleted(deletedBook: DeletedBookEntity)
 }

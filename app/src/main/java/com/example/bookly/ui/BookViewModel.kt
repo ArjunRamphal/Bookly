@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import java.io.File
 import java.io.FileOutputStream
@@ -31,6 +32,12 @@ import java.io.FileOutputStream
 class BookViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: BookRepository
+
+    // --- SEARCH STATE ---
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
+    // --- FILTERED BOOKS ---
     val libraryBooks: StateFlow<List<BookEntity>>
 
     private val prefs = application.getSharedPreferences("bookly_prefs", Context.MODE_PRIVATE)
@@ -40,7 +47,17 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
     init {
         val bookDao = BookDatabase.getDatabase(application).bookDao()
         repository = BookRepository(bookDao)
-        libraryBooks = repository.allBooks.stateIn(
+
+        // Initialize libraryBooks with filtering logic
+        libraryBooks = combine(repository.allBooks, _searchQuery) { books, query ->
+            if (query.isBlank()) {
+                books
+            } else {
+                books.filter { book ->
+                    book.title.contains(query, ignoreCase = true)
+                }
+            }
+        }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
@@ -62,6 +79,11 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
     private var pendingUri: Uri? = null
     private var pendingTitle: String = ""
 
+    // --- SEARCH ACTION ---
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
+    }
+
     fun setImportFolder(uri: Uri) {
         val context = getApplication<Application>()
         val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
@@ -79,20 +101,23 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
             val files = folder.listFiles()
 
             val existingBooks = repository.allBooks.first()
+            val deletedFiles = repository.getDeletedFileNames()
 
             for (file in files) {
                 if (file.isDirectory) continue
                 val name = file.name ?: continue
                 val ext = name.substringAfterLast(".", "").lowercase()
 
-                // --- FIX 1: Add "rtf" to allowed extensions ---
                 if (ext !in listOf("pdf", "epub", "txt", "rtf")) continue
 
-                // 1. Title Check
+                // 1. Check ignore list (User deleted this before)
+                if (deletedFiles.contains(name)) continue
+
+                // 2. Title Check
                 val title = name.substringBeforeLast(".")
                 if (existingBooks.any { it.title.equals(title, ignoreCase = true) }) continue
 
-                // 2. Import (allowOverwrite = false)
+                // 3. Import
                 finalizeImport(file.uri, name, allowOverwrite = false)
             }
         }
@@ -158,8 +183,6 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             val savedPath = "file://${internalFile.absolutePath}"
-
-            // --- FIX 2: Detect RTF format correctly ---
             val format = when {
                 fileName.contains("pdf", ignoreCase = true) -> "pdf"
                 fileName.contains("epub", ignoreCase = true) -> "epub"
@@ -176,7 +199,6 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
             } else if (format == "pdf") {
                 coverPath = generatePdfCover(context, uri, title)
             }
-            // TXT and RTF do not typically have extractable covers
 
             val newBook = BookEntity(
                 title = title,
@@ -197,20 +219,16 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
             val fileDescriptor = context.contentResolver.openFileDescriptor(uri, "r") ?: return null
             val renderer = PdfRenderer(fileDescriptor)
             val page = renderer.openPage(0)
-
             val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
             page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-
             page.close()
             renderer.close()
             fileDescriptor.close()
-
             val safeName = title.replace("[^a-zA-Z0-9]".toRegex(), "_")
             val coverFile = File(context.filesDir, "${safeName}_cover.jpg")
             FileOutputStream(coverFile).use { out ->
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 80, out)
             }
-
             "file://${coverFile.absolutePath}"
         } catch (e: Exception) {
             e.printStackTrace()
@@ -218,18 +236,49 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun deleteBook(book: BookEntity) {
+    // --- UPDATED DELETE LOGIC ---
+    fun deleteBook(book: BookEntity, deleteFromDevice: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
+            // 1. Delete Internal Copy (Always deleted)
+            var fileName = ""
             if (book.filePath.startsWith("file://")) {
                 try {
-                    File(book.filePath.removePrefix("file://")).delete()
+                    val file = File(book.filePath.removePrefix("file://"))
+                    fileName = file.name
+                    if (file.exists()) file.delete()
                 } catch (e: Exception) { e.printStackTrace() }
             }
+
+            // 2. Delete Cover (Always deleted)
             if (book.coverImage != null && book.coverImage.startsWith("file://")) {
                 try {
                     File(book.coverImage.removePrefix("file://")).delete()
                 } catch (e: Exception) { e.printStackTrace() }
             }
+
+            // 3. Handle Source File & Ignore List
+            if (fileName.isNotEmpty()) {
+                if (deleteFromDevice) {
+                    // OPTION A: Delete the original source file.
+                    // We DO NOT mark as deleted (Ignore list), because the file is gone.
+                    _importFolder.value?.let { uriString ->
+                        try {
+                            val context = getApplication<Application>()
+                            val folder = DocumentFile.fromTreeUri(context, Uri.parse(uriString))
+                            val sourceFile = folder?.findFile(fileName)
+                            sourceFile?.delete()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                } else {
+                    // OPTION B: Keep source file.
+                    // We MUST mark as deleted so scanner ignores it.
+                    repository.markAsDeleted(fileName)
+                }
+            }
+
+            // 4. Remove from DB
             repository.deleteBook(book)
         }
     }
