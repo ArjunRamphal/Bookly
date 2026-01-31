@@ -33,12 +33,12 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
-    kotlinOptions {
+   /* kotlinOptions {
         jvmTarget = "11"
-    }
+    }*/
     buildFeatures {
         compose = true
     }
@@ -49,6 +49,10 @@ android {
             output?.outputFileName = "Bookly.apk"
         }
     }
+}
+
+kotlin {
+    jvmToolchain(21)
 }
 
 dependencies {
@@ -71,10 +75,10 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     // PDF Viewer
-    implementation("com.github.mhiew:android-pdf-viewer:3.2.0-beta.1")
+    implementation(libs.android.pdf.viewer)
 
     // Epub Parser
     implementation("com.positiondev.epublib:epublib-core:3.1") {
@@ -82,17 +86,17 @@ dependencies {
         exclude(group = "net.sf.kxml", module = "kxml2")
     }
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
+    implementation(libs.kotlinx.coroutines.android)
     // Navigation
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation(libs.androidx.navigation.compose)
     // Image Loading
-    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation(libs.coil.compose)
     // Material Icons
-    implementation("androidx.compose.material:material-icons-extended:1.6.3")
+    implementation(libs.androidx.compose.material.icons.extended)
 
-    val roomVersion = "2.6.1"
-    implementation("androidx.room:room-runtime:$roomVersion")
-    implementation("androidx.room:room-ktx:$roomVersion")
+    val room = "2.8.4"
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
     //ksp("androidx.room:room-compiler:$roomVersion")
-    add("ksp", "androidx.room:room-compiler:$roomVersion")
+    add("ksp", "androidx.room:room-compiler:$room")
 }
