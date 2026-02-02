@@ -33,6 +33,7 @@ import com.example.bookly.data.BookEntity
 @Composable
 fun HomeScreen(
     onBookClick: (Int, String, String) -> Unit,
+    onSettingsClick: () -> Unit, // <--- Added Callback
     viewModel: BookViewModel = viewModel()
 ) {
 
@@ -48,25 +49,19 @@ fun HomeScreen(
     }
 
     val books by viewModel.libraryBooks.collectAsState()
-    val importFolder by viewModel.importFolder.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val sortOption by viewModel.sortOption.collectAsState()
 
-    var showSettingsDialog by remember { mutableStateOf(false) }
     var showFilterMenu by remember { mutableStateOf(false) }
 
+    // Launcher for adding individual books (Keep this in HomeScreen)
     val fileLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let { viewModel.importBook(it) }
     }
 
-    val folderLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri: Uri? ->
-        uri?.let { viewModel.setImportFolder(it) }
-    }
-
+    // Duplicate Dialog Logic
     if (viewModel.showDuplicateDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.cancelImport() },
@@ -81,73 +76,12 @@ fun HomeScreen(
         )
     }
 
-    if (showSettingsDialog) {
-        AlertDialog(
-            onDismissRequest = { showSettingsDialog = false },
-            title = { Text("Settings") },
-            text = {
-                Column {
-                    Text("Automatic Import", style = MaterialTheme.typography.titleSmall)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Select a folder. The app will automatically import books from this folder on startup.", style = MaterialTheme.typography.bodySmall)
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    OutlinedButton(
-                        onClick = { folderLauncher.launch(null) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.FolderOpen, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Select Folder")
-                    }
-
-                    if (importFolder != null) {
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        val readablePath = remember(importFolder) {
-                            val decoded = Uri.decode(importFolder)
-                            when {
-                                decoded.contains("primary:") -> {
-                                    val path = decoded.substringAfter("primary:")
-                                    if (path.isEmpty()) "Internal Storage" else "Internal Storage > $path"
-                                }
-                                decoded.contains("tree/") -> {
-                                    val raw = decoded.substringAfter("tree/")
-                                    if (raw.contains(":")) "SD Card > " + raw.substringAfter(":") else raw
-                                }
-                                else -> decoded
-                            }
-                        }
-
-                        Text(
-                            text = "Currently monitoring:",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = readablePath,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showSettingsDialog = false }) {
-                    Text("Done")
-                }
-            }
-        )
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Bookly") },
                 actions = {
-                    IconButton(onClick = { showSettingsDialog = true }) {
+                    IconButton(onClick = onSettingsClick) { // <--- Trigger navigation
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
                 }
@@ -294,7 +228,6 @@ fun HomeScreen(
     }
 }
 
-// ... (BookItem and EmptyState remain unchanged from previous versions)
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookItem(
@@ -483,9 +416,7 @@ fun BookItem(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .combinedClickable(
-                                onClick = { deleteFromDevice = !deleteFromDevice }
-                            )
+                            .combinedClickable(onClick = { deleteFromDevice = !deleteFromDevice })
                     ) {
                         Checkbox(
                             checked = deleteFromDevice,

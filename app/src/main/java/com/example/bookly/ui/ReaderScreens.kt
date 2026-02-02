@@ -14,18 +14,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.TextDecrease
-import androidx.compose.material.icons.filled.TextIncrease
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -37,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bookly.utils.EpubUtils
 import com.github.barteksc.pdfviewer.PDFView
 import kotlinx.coroutines.Dispatchers
@@ -124,11 +123,13 @@ private enum class ScrollTarget {
     TOP, BOTTOM, SAVED
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EpubReaderScreen(
     uri: Uri,
     initialProgress: Float = 0f, // 0-100%
-    onSaveProgress: (Float) -> Unit = {}
+    onSaveProgress: (Float) -> Unit = {},
+    viewModel: BookViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val view = LocalView.current
@@ -139,6 +140,11 @@ fun EpubReaderScreen(
     var showControls by remember { mutableStateOf(false) }
     var fontSize by remember { mutableIntStateOf(100) }
     var isDarkMode by remember { mutableStateOf(systemInDarkTheme) }
+
+    // Font State
+    val availableFonts by viewModel.availableFonts.collectAsState()
+    val selectedFont by viewModel.selectedFont.collectAsState()
+    var showFontSheet by remember { mutableStateOf(false) }
 
     // Navigation State
     var currentChapterIndex by remember { mutableIntStateOf(0) }
@@ -159,6 +165,33 @@ fun EpubReaderScreen(
         else "document.body.style.backgroundColor = '#ffffff'; document.body.style.color = '#000000';"
     }
 
+    // Prepare HTML with CSS injection for Custom Fonts
+    val finalHtml = remember(htmlContent, selectedFont) {
+        val content = htmlContent ?: ""
+        if (selectedFont == null) {
+            content
+        } else {
+            """
+            <html>
+            <head>
+            <style>
+                @font-face {
+                    font-family: 'CustomFont';
+                    src: url('fonts/$selectedFont');
+                }
+                body, p, div, span, h1, h2, h3, h4, h5, h6 {
+                    font-family: 'CustomFont', sans-serif !important;
+                }
+            </style>
+            </head>
+            <body>
+            $content
+            </body>
+            </html>
+            """
+        }
+    }
+
     // Save global percentage on exit
     DisposableEffect(Unit) {
         onDispose { onSaveProgress(globalProgressPercent) }
@@ -176,7 +209,6 @@ fun EpubReaderScreen(
         withContext(Dispatchers.IO) {
             val uriString = uri.toString()
             val isTxt = uriString.endsWith("txt", ignoreCase = true)
-            // Check for RTF extension
             val isRtf = uriString.endsWith("rtf", ignoreCase = true)
 
             if (isTxt) {
@@ -185,7 +217,6 @@ fun EpubReaderScreen(
                 savedScrollFraction = initialProgress / 100f
                 isLoading = false
             } else if (isRtf) {
-                // Handle RTF: Treat as single chapter, use new parser
                 totalChapters = 1
                 htmlContent = EpubUtils.parseRtf(context, uri)
                 savedScrollFraction = initialProgress / 100f
@@ -266,7 +297,8 @@ fun EpubReaderScreen(
                         fontSize = fontSize,
                         isDarkMode = isDarkMode,
                         onFontChange = { newSize -> fontSize = newSize.coerceIn(50, 200) },
-                        onThemeToggle = { isDarkMode = !isDarkMode }
+                        onThemeToggle = { isDarkMode = !isDarkMode },
+                        onOpenFontSheet = { showFontSheet = true }
                     )
                 }
             }
@@ -288,6 +320,8 @@ fun EpubReaderScreen(
                             settings.javaScriptEnabled = true
                             settings.builtInZoomControls = false
                             settings.displayZoomControls = false
+                            // CRITICAL: Allow WebView to access local file storage for fonts
+                            settings.allowFileAccess = true
 
                             var dragStartY = 0f
                             val OVERSCROLL_THRESHOLD = 150f
@@ -338,7 +372,6 @@ fun EpubReaderScreen(
                                     val currentGlobalIndex = currentChapterIndex + scrollFraction.coerceIn(0f, 1f)
                                     globalProgressPercent = (currentGlobalIndex / totalChapters) * 100f
                                 } else if (totalChapters == 1) {
-                                    // For Single Chapter books (TXT/RTF), progress is just the scroll fraction
                                     globalProgressPercent = scrollFraction * 100f
                                 }
                             }
@@ -386,9 +419,12 @@ fun EpubReaderScreen(
                         webView.settings.textZoom = fontSize
                         webView.setBackgroundColor(if (isDarkMode) 0xFF121212.toInt() else 0xFFFFFFFF.toInt())
 
-                        if (htmlContent != null && webView.tag != htmlContent) {
-                            webView.tag = htmlContent
-                            webView.loadDataWithBaseURL(null, htmlContent!!, "text/html", "UTF-8", null)
+                        // Use finalHtml which includes CSS injection
+                        if (finalHtml != null && webView.tag != finalHtml) {
+                            webView.tag = finalHtml
+                            // CRITICAL: Base URL must point to files dir to load fonts
+                            val baseUrl = "file://${context.filesDir.absolutePath}/"
+                            webView.loadDataWithBaseURL(baseUrl, finalHtml, "text/html", "UTF-8", null)
                         }
 
                         webView.evaluateJavascript(getThemeJs(isDarkMode), null)
@@ -400,6 +436,54 @@ fun EpubReaderScreen(
                     isDarkMode = isDarkMode,
                     modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                 )
+            }
+        }
+    }
+
+    if (showFontSheet) {
+        ModalBottomSheet(onDismissRequest = { showFontSheet = false }) {
+            Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                Text(
+                    "Select Font",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(16.dp)
+                )
+
+                LazyColumn {
+                    // Default Option
+                    item {
+                        ListItem(
+                            headlineContent = { Text("Default System Font") },
+                            trailingContent = {
+                                if (selectedFont == null) Icon(Icons.Default.Check, contentDescription = null)
+                            },
+                            modifier = Modifier.clickable {
+                                viewModel.selectFont(null)
+                                showFontSheet = false
+                            }
+                        )
+                    }
+
+                    // Custom Fonts
+                    items(availableFonts) { fontName ->
+                        ListItem(
+                            headlineContent = { Text(fontName) },
+                            trailingContent = {
+                                if (selectedFont == fontName) Icon(Icons.Default.Check, contentDescription = null)
+                            },
+                            modifier = Modifier.clickable {
+                                viewModel.selectFont(fontName)
+                                showFontSheet = false
+                            }
+                        )
+                    }
+                }
+
+                if (availableFonts.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                        Text("No custom fonts imported. Go to Settings to add fonts.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    }
+                }
             }
         }
     }
@@ -514,7 +598,8 @@ fun ReaderControls(
     fontSize: Int,
     isDarkMode: Boolean,
     onFontChange: (Int) -> Unit,
-    onThemeToggle: () -> Unit
+    onThemeToggle: () -> Unit,
+    onOpenFontSheet: () -> Unit
 ) {
     Surface(
         tonalElevation = 8.dp,
@@ -527,11 +612,17 @@ fun ReaderControls(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Appearance", style = MaterialTheme.typography.titleMedium)
-                IconButton(onClick = onThemeToggle) {
-                    Icon(
-                        imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
-                        contentDescription = "Toggle Theme"
-                    )
+                Row {
+                    // Font Selection Button
+                    IconButton(onClick = onOpenFontSheet) {
+                        Icon(Icons.Default.FormatSize, contentDescription = "Change Font")
+                    }
+                    IconButton(onClick = onThemeToggle) {
+                        Icon(
+                            imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = "Toggle Theme"
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))

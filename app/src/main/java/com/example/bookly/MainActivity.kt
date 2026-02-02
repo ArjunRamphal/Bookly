@@ -28,6 +28,7 @@ import com.example.bookly.ui.BookViewModel
 import com.example.bookly.ui.EpubReaderScreen
 import com.example.bookly.ui.HomeScreen
 import com.example.bookly.ui.PdfReaderScreen
+import com.example.bookly.ui.SettingsScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,12 +66,12 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
 
-    // Observer the library to get current progress values
+    // Observe the library to get current progress values for readers
     val libraryBooks = viewModel.libraryBooks.collectAsState().value
 
     NavHost(navController = navController, startDestination = "home") {
 
-        // HOME SCREEN
+        // --- HOME SCREEN ---
         composable("home") {
             HomeScreen(
                 onBookClick = { bookId, encodedPath, format ->
@@ -79,11 +80,26 @@ fun AppNavigation(
                     } else {
                         navController.navigate("epub/$bookId/$encodedPath")
                     }
-                }
+                },
+                // Navigate to the new settings route
+                onSettingsClick = {
+                    navController.navigate("settings")
+                },
+                viewModel = viewModel
             )
         }
 
-        // PDF READER ROUTE
+        // --- SETTINGS SCREEN ---
+        composable("settings") {
+            SettingsScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                viewModel = viewModel
+            )
+        }
+
+        // --- PDF READER ROUTE ---
         composable(
             route = "pdf/{bookId}/{bookUri}",
             arguments = listOf(
@@ -109,7 +125,7 @@ fun AppNavigation(
             )
         }
 
-        // EPUB / TXT READER ROUTE
+        // --- EPUB / TXT READER ROUTE ---
         composable(
             route = "epub/{bookId}/{bookUri}",
             arguments = listOf(

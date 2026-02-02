@@ -17,7 +17,7 @@ import java.util.regex.Pattern
 object EpubUtils {
 
     // --- HELPER: OPEN BOOK ---
-    private fun getBook(context: Context, uri: Uri): Book? {
+    fun getBook(context: Context, uri: Uri): Book? {
         try {
             val inputStream = getInputStream(context, uri) ?: return null
             return EpubReader().readEpub(inputStream)
@@ -95,7 +95,6 @@ object EpubUtils {
             <head>
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
                 <style>
-                    /* FIX: Ensure padding doesn't overflow width */
                     * { max-width: 100% !important; box-sizing: border-box !important; }
                     html, body { width: 100%; margin: 0; padding: 16px; word-wrap: break-word; font-family: sans-serif; }
                     pre { white-space: pre-wrap; font-family: inherit; margin: 0; }
@@ -123,9 +122,7 @@ object EpubUtils {
             <head>
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
                 <style>
-                    /* FIX: Ensure padding doesn't overflow width */
                     * { max-width: 100% !important; box-sizing: border-box !important; }
-                    
                     html, body { width: 100%; margin: 0; padding: 16px; word-wrap: break-word; font-family: sans-serif; line-height: 1.6; }
                     p { margin-bottom: 1em; }
                     img { max-width: 100%; height: auto; display: block; margin: 10px auto; }
@@ -140,7 +137,7 @@ object EpubUtils {
         }
     }
 
-    // --- RTF PARSER ENGINE ---
+    // --- RTF PARSER ENGINE (Unchanged) ---
     private fun convertRtfToHtml(rtf: String): String {
         val result = StringBuilder()
         val len = rtf.length
@@ -149,7 +146,6 @@ object EpubUtils {
         var groupLevel = 0
         var ignoreLevel = -1
 
-        // Image Processing State
         var isPictureGroup = false
         var pictureHex = StringBuilder()
         var pictureGroupLevel = -1
@@ -165,34 +161,26 @@ object EpubUtils {
                             if (ignoreLevel == -1) ignoreLevel = groupLevel
                         } else {
                             val peek = rtf.substring(i + 1, (i + 20).coerceAtMost(len))
-
-                            // 1. Detect Picture Group
                             if (peek.startsWith("\\pict")) {
                                 isPictureGroup = true
                                 pictureGroupLevel = groupLevel
                                 pictureHex.clear()
-                            }
-                            // 2. Ignore other metadata
-                            else if (peek.startsWith("\\fonttbl") ||
+                            } else if (peek.startsWith("\\fonttbl") ||
                                 peek.startsWith("\\colortbl") ||
                                 peek.startsWith("\\stylesheet") ||
                                 peek.startsWith("\\info") ||
                                 peek.startsWith("\\object") ||
                                 peek.startsWith("\\header") ||
                                 peek.startsWith("\\footer")) {
-
                                 if (ignoreLevel == -1) ignoreLevel = groupLevel
                             }
                         }
                     }
                 }
                 '}' -> {
-                    // 3. Process Picture on Close
                     if (isPictureGroup && groupLevel == pictureGroupLevel) {
                         isPictureGroup = false
                         pictureGroupLevel = -1
-
-                        // Convert Hex -> Base64 -> HTML
                         if (pictureHex.isNotEmpty()) {
                             try {
                                 val bytes = hexStringToByteArray(pictureHex.toString())
@@ -200,12 +188,9 @@ object EpubUtils {
                                     val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
                                     result.append("<img src=\"data:image/jpeg;base64,$b64\" />")
                                 }
-                            } catch (e: Exception) {
-                                result.append("[Image Error]")
-                            }
+                            } catch (e: Exception) { result.append("[Image Error]") }
                         }
                     }
-
                     if (ignoreLevel == groupLevel) ignoreLevel = -1
                     if (groupLevel > 0) groupLevel--
                 }
@@ -213,9 +198,7 @@ object EpubUtils {
                     if (i + 1 < len) {
                         var end = i + 1
                         val nextC = rtf[end]
-
                         if (!nextC.isLetter()) {
-                            // Escaped chars
                             if (nextC == '\'') {
                                 if (!isPictureGroup && ignoreLevel == -1 && i + 3 < len) {
                                     try {
@@ -223,39 +206,28 @@ object EpubUtils {
                                         result.append(hex.toInt(16).toChar())
                                         i += 3
                                     } catch (e: Exception) {}
-                                } else {
-                                    i++ // Skip ' in picture mode too
-                                }
+                                } else { i++ }
                             } else if (!isPictureGroup && ignoreLevel == -1 && (nextC == '{' || nextC == '}' || nextC == '\\')) {
                                 result.append(nextC)
                                 i++
-                            } else {
-                                i++
-                            }
+                            } else { i++ }
                         } else {
-                            // Control Words (\par, \pict, etc)
                             while (end < len && rtf[end].isLetter()) end++
-                            val word = rtf.substring(i + 1, end)
-
-                            // Consume params
-                            var paramStart = end
                             if (end < len && rtf[end] == '-') end++
                             while (end < len && rtf[end].isDigit()) end++
-
                             if (end < len && rtf[end] == ' ') end++
-
                             if (!isPictureGroup && ignoreLevel == -1) {
-                                when (word) {
-                                    "par" -> result.append("<br><br>")
-                                    "line" -> result.append("<br>")
-                                    "tab" -> result.append("&emsp;")
-                                    "b" -> result.append("<b>")
-                                    "b0" -> result.append("</b>")
-                                    "i" -> result.append("<i>")
-                                    "i0" -> result.append("</i>")
+                                val word = rtf.substring(i + 1, end).trim()
+                                when {
+                                    word.startsWith("par") -> result.append("<br><br>")
+                                    word.startsWith("line") -> result.append("<br>")
+                                    word.startsWith("tab") -> result.append("&emsp;")
+                                    word.startsWith("b") && !word.contains("0") -> result.append("<b>")
+                                    word.startsWith("b0") -> result.append("</b>")
+                                    word.startsWith("i") && !word.contains("0") -> result.append("<i>")
+                                    word.startsWith("i0") -> result.append("</i>")
                                 }
                             }
-
                             i = end - 1
                         }
                     }
@@ -263,10 +235,7 @@ object EpubUtils {
                 '\r', '\n' -> {}
                 else -> {
                     if (isPictureGroup) {
-                        // 4. Capture Hex Data
-                        if (c.isDigit() || (c in 'a'..'f') || (c in 'A'..'F')) {
-                            pictureHex.append(c)
-                        }
+                        if (c.isDigit() || (c in 'a'..'f') || (c in 'A'..'F')) pictureHex.append(c)
                     } else if (ignoreLevel == -1 && c != '\u0000') {
                         result.append(c)
                     }
@@ -277,26 +246,18 @@ object EpubUtils {
         return result.toString()
     }
 
-    // --- HEX CONVERTER ---
     private fun hexStringToByteArray(s: String): ByteArray {
         val len = s.length
-        // Filter odd length (rare edge case in broken RTF)
         val safeLen = if (len % 2 != 0) len - 1 else len
         val data = ByteArray(safeLen / 2)
-
         var i = 0
         var j = 0
         while (i < safeLen) {
             val high = Character.digit(s[i], 16)
             val low = Character.digit(s[i + 1], 16)
-            if (high == -1 || low == -1) {
-                // Should not happen due to pre-filtering, but safety check
-                i += 2
-                continue
-            }
+            if (high == -1 || low == -1) { i += 2; continue }
             data[j] = ((high shl 4) + low).toByte()
-            i += 2
-            j++
+            i += 2; j++
         }
         return data
     }
@@ -306,61 +267,88 @@ object EpubUtils {
         return try {
             val book = getBook(context, uri) ?: return null
             val coverImage = book.coverImage ?: return null
-
             val safeName = saveName.replace("[^a-zA-Z0-9]".toRegex(), "_")
             val fileName = "${safeName}_cover.jpg"
             val file = File(context.filesDir, fileName)
-
             FileOutputStream(file).use { it.write(coverImage.data) }
             "file://${file.absolutePath}"
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
+        } catch (e: Exception) { e.printStackTrace(); null }
     }
 
-    // --- HELPERS ---
+    // --- FIXED: IMAGE INJECTION ---
     private fun injectImages(html: String, book: Book, currentHref: String): String {
         var modifiedHtml = html
-        val pattern = Pattern.compile("src=[\"']([^\"']+)[\"']")
+
+        // FIX 1: Match 'src', 'href', and 'xlink:href' attributes
+        // This is crucial because SVG wrappers in EPUBs often use xlink:href instead of src.
+        // We look for any attribute ending in 'href' or 'src'.
+        val pattern = Pattern.compile("(src|href|xlink:href)=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE)
         val matcher = pattern.matcher(html)
+
         val replacements = mutableMapOf<String, String>()
 
         while (matcher.find()) {
-            val originalSrc = matcher.group(1) ?: continue
-            if (originalSrc.startsWith("http") || originalSrc.startsWith("data:")) continue
+            // Group 2 contains the path (e.g. "../Images/cover.jpg")
+            val originalSrc = matcher.group(2) ?: continue
+
+            // Skip external links or already encoded data
+            if (originalSrc.startsWith("http") || originalSrc.startsWith("data:") || originalSrc.startsWith("#")) continue
 
             val decodedSrc = try { URLDecoder.decode(originalSrc, "UTF-8") } catch (e: Exception) { originalSrc }
+
+            // Resolve relative path (e.g. "../Images/img.jpg" -> "Images/img.jpg")
             val resolvedHref = resolveRelativePath(currentHref, decodedSrc)
+
+            // Try to find the resource in the book
             val imageResource = findResourceRobust(book, resolvedHref)
 
             if (imageResource != null) {
-                try {
-                    val b64 = Base64.encodeToString(imageResource.data, Base64.NO_WRAP)
-                    val mimeType = when {
-                        resolvedHref.endsWith(".png", true) -> "image/png"
-                        resolvedHref.endsWith(".gif", true) -> "image/gif"
-                        resolvedHref.endsWith(".svg", true) -> "image/svg+xml"
-                        else -> "image/jpeg"
+                // FIX 2: Verify it is actually an image before replacing
+                // We don't want to break navigation links (<a href="chapter2.html">)
+                val isImage = resolvedHref.endsWith(".jpg", true) ||
+                        resolvedHref.endsWith(".jpeg", true) ||
+                        resolvedHref.endsWith(".png", true) ||
+                        resolvedHref.endsWith(".gif", true) ||
+                        resolvedHref.endsWith(".svg", true)
+
+                if (isImage) {
+                    try {
+                        val b64 = Base64.encodeToString(imageResource.data, Base64.NO_WRAP)
+                        val mimeType = when {
+                            resolvedHref.endsWith(".png", true) -> "image/png"
+                            resolvedHref.endsWith(".gif", true) -> "image/gif"
+                            resolvedHref.endsWith(".svg", true) -> "image/svg+xml"
+                            else -> "image/jpeg"
+                        }
+                        // We replace the path with the Base64 data URI
+                        replacements[originalSrc] = "data:$mimeType;base64,$b64"
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
-                    replacements[originalSrc] = "data:$mimeType;base64,$b64"
-                } catch (e: Exception) { e.printStackTrace() }
+                }
             }
         }
 
+        // Apply replacements
         for ((oldSrc, newSrc) in replacements) {
-            modifiedHtml = modifiedHtml.replace("src=\"$oldSrc\"", "src=\"$newSrc\"")
-            modifiedHtml = modifiedHtml.replace("src='$oldSrc'", "src='$newSrc'")
+            // We use simple string replacement which is safer than regex replacement for the content
+            modifiedHtml = modifiedHtml.replace("=\"$oldSrc\"", "=\"$newSrc\"")
+            modifiedHtml = modifiedHtml.replace("='$oldSrc'", "='$newSrc'")
         }
         return modifiedHtml
     }
 
     private fun findResourceRobust(book: Book, href: String): Resource? {
+        // 1. Direct lookup
         var res = book.resources.getByHref(href)
         if (res != null) return res
+
+        // 2. Decoded lookup
         val decodedHref = try { URLDecoder.decode(href, "UTF-8") } catch (e: Exception) { href }
         res = book.resources.getByHref(decodedHref)
         if (res != null) return res
+
+        // 3. Case-insensitive scan (slowest but most robust)
         for ((key, value) in book.resources.resourceMap) {
             if (key.equals(href, ignoreCase = true) || key.equals(decodedHref, ignoreCase = true)) {
                 return value
@@ -377,10 +365,7 @@ object EpubUtils {
             } else {
                 context.contentResolver.openInputStream(uri)
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
+        } catch (e: Exception) { null }
     }
 
     private fun resolveRelativePath(baseHref: String, relativePath: String): String {
