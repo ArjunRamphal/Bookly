@@ -36,10 +36,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.bookly.utils.EpubUtils
+import com.example.bookly.utils.BookUtils
 import com.github.barteksc.pdfviewer.PDFView
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 // --- PDF READER (Unchanged) ---
@@ -213,16 +212,16 @@ fun EpubReaderScreen(
 
             if (isTxt) {
                 totalChapters = 1
-                htmlContent = EpubUtils.parseTxt(context, uri)
+                htmlContent = BookUtils.parseTxt(context, uri)
                 savedScrollFraction = initialProgress / 100f
                 isLoading = false
             } else if (isRtf) {
                 totalChapters = 1
-                htmlContent = EpubUtils.parseRtf(context, uri)
+                htmlContent = BookUtils.parseRtf(context, uri)
                 savedScrollFraction = initialProgress / 100f
                 isLoading = false
             } else {
-                val chapters = EpubUtils.getChapters(context, uri)
+                val chapters = BookUtils.getChapters(context, uri)
                 totalChapters = chapters.size
 
                 if (totalChapters > 0) {
@@ -233,7 +232,7 @@ fun EpubReaderScreen(
                     currentChapterIndex = 0
                 }
 
-                htmlContent = EpubUtils.loadChapter(context, uri, currentChapterIndex)
+                htmlContent = BookUtils.loadChapter(context, uri, currentChapterIndex)
                 isLoading = false
             }
         }
@@ -244,7 +243,7 @@ fun EpubReaderScreen(
         if (totalChapters > 1 && !isLoading) {
             isLoading = true
             withContext(Dispatchers.IO) {
-                htmlContent = EpubUtils.loadChapter(context, uri, currentChapterIndex)
+                htmlContent = BookUtils.loadChapter(context, uri, currentChapterIndex)
                 isLoading = false
             }
         }

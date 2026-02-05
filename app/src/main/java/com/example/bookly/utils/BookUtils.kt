@@ -14,7 +14,7 @@ import java.net.URLDecoder
 import java.nio.charset.Charset
 import java.util.regex.Pattern
 
-object EpubUtils {
+object BookUtils {
 
     // --- HELPER: OPEN BOOK ---
     fun getBook(context: Context, uri: Uri): Book? {

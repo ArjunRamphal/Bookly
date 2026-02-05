@@ -12,7 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.bookly.data.BookDatabase
 import com.example.bookly.data.BookEntity
 import com.example.bookly.data.BookRepository
-import com.example.bookly.utils.EpubUtils
+import com.example.bookly.utils.BookUtils
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -228,7 +228,7 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
             val title = fileName.substringBeforeLast(".")
             var coverPath: String? = null
             if (format == "epub") {
-                coverPath = EpubUtils.extractCoverImage(context, uri, title)
+                coverPath = BookUtils.extractCoverImage(context, uri, title)
             } else if (format == "pdf") {
                 coverPath = generatePdfCover(context, uri, title)
             }
