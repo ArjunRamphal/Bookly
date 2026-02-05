@@ -1,5 +1,8 @@
 # Bookly
 
+![Kotlin](https://img.shields.io/badge/kotlin-%237F52FF.svg?style=for-the-badge&logo=kotlin&logoColor=white)
+![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)
+
 Bookly is a lightweight, modern eBook reader for Android built entirely with **Kotlin** and **Jetpack Compose**. It is designed to handle large EPUBs, PDFs, and TXT files efficiently while providing a smooth, customizable reading experience.
 
 ## Features
