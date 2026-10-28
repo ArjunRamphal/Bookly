@@ -197,7 +197,9 @@ fun HomeScreen(
                             Text("No books found", color = Color.Gray)
                         }
                     } else {
-                        EmptyState(padding = PaddingValues(0.dp))
+                        EmptyState(padding = PaddingValues(0.dp)) {
+                            fileLauncher.launch(arrayOf("application/pdf", "application/epub+zip", "text/plain", "application/rtf", "text/rtf"))
+                        }
                     }
                 }
             } else {
@@ -447,7 +449,7 @@ fun BookItem(
 }
 
 @Composable
-fun EmptyState(padding: PaddingValues) {
+fun EmptyState(padding: PaddingValues, onAddClick: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().padding(padding),
         verticalArrangement = Arrangement.Center,
@@ -461,10 +463,11 @@ fun EmptyState(padding: PaddingValues) {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(text = "Your library is empty.", style = MaterialTheme.typography.titleMedium)
-        Text(
-            text = "Tap the + button to add a book.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.Gray
-        )
+        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedButton(onClick = onAddClick) {
+            Icon(Icons.Default.Add, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Add a Book")
+        }
     }
 }
