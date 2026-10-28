@@ -101,12 +101,17 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
             context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                 val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                 if (cursor.moveToFirst() && nameIndex != -1) {
-                    fileName = cursor.getString(nameIndex)
+                    val rawName = cursor.getString(nameIndex)
+                    if (rawName != null) fileName = File(rawName).name // Sanitize path traversal
                 }
             }
 
             try {
                 val destFile = File(fontsDir, fileName)
+                // Additional canonical path validation
+                if (!destFile.canonicalPath.startsWith(fontsDir.canonicalPath + File.separator)) {
+                    throw SecurityException("Invalid font file path")
+                }
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     FileOutputStream(destFile).use { output ->
                         input.copyTo(output)
@@ -121,11 +126,15 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deleteFont(fileName: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            File(fontsDir, fileName).delete()
-            if (_selectedFont.value == fileName) {
-                selectFont(null) // Reset to default if deleted
+            val safeName = File(fileName).name
+            val destFile = File(fontsDir, safeName)
+            if (destFile.canonicalPath.startsWith(fontsDir.canonicalPath + File.separator)) {
+                destFile.delete()
+                if (_selectedFont.value == fileName) {
+                    selectFont(null) // Reset to default if deleted
+                }
+                refreshFonts()
             }
-            refreshFonts()
         }
     }
 
@@ -181,7 +190,8 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
             context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                 val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                 if (cursor.moveToFirst() && nameIndex != -1) {
-                    fileName = cursor.getString(nameIndex)
+                    val rawName = cursor.getString(nameIndex)
+                    if (rawName != null) fileName = File(rawName).name // Sanitize path traversal
                 }
             }
             val title = fileName.substringBeforeLast(".")
@@ -212,7 +222,11 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun finalizeImport(uri: Uri, fileName: String, allowOverwrite: Boolean) {
         val context = getApplication<Application>().applicationContext
         try {
-            val internalFile = File(context.filesDir, fileName)
+            val safeName = File(fileName).name // Prevent path traversal
+            val internalFile = File(context.filesDir, safeName)
+            if (!internalFile.canonicalPath.startsWith(context.filesDir.canonicalPath + File.separator)) {
+                throw SecurityException("Invalid file path")
+            }
             if (internalFile.exists() && !allowOverwrite) return
             context.contentResolver.openInputStream(uri)?.use { input ->
                 FileOutputStream(internalFile).use { output -> input.copyTo(output) }
