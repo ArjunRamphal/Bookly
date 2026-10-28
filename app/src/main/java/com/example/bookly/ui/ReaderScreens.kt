@@ -464,7 +464,10 @@ fun EpubReaderScreen(
                     }
 
                     // Custom Fonts
-                    items(availableFonts) { fontName ->
+                    items(
+                        items = availableFonts,
+                        key = { it } // ⚡ Bolt: Adding stable keys prevents unnecessary recompositions when font list changes
+                    ) { fontName ->
                         ListItem(
                             headlineContent = { Text(fontName) },
                             trailingContent = {

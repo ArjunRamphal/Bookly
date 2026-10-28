@@ -208,7 +208,10 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(books) { book ->
+                    items(
+                        items = books,
+                        key = { it.id } // ⚡ Bolt: Adding stable keys prevents unnecessary recompositions and improves scrolling performance
+                    ) { book ->
                         BookItem(
                             book = book,
                             onClick = {
