@@ -101,7 +101,8 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
             context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                 val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                 if (cursor.moveToFirst() && nameIndex != -1) {
-                    fileName = cursor.getString(nameIndex)
+                    val rawName = cursor.getString(nameIndex)
+                    fileName = java.io.File(rawName).name // Prevent Path Traversal
                 }
             }
 
@@ -181,7 +182,8 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
             context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                 val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                 if (cursor.moveToFirst() && nameIndex != -1) {
-                    fileName = cursor.getString(nameIndex)
+                    val rawName = cursor.getString(nameIndex)
+                    fileName = java.io.File(rawName).name // Prevent Path Traversal
                 }
             }
             val title = fileName.substringBeforeLast(".")
