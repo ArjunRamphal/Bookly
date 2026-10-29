@@ -619,7 +619,7 @@ fun ReaderControls(
                     IconButton(onClick = onThemeToggle) {
                         Icon(
                             imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
-                            contentDescription = "Toggle Theme"
+                            contentDescription = if (isDarkMode) "Switch to light mode" else "Switch to dark mode"
                         )
                     }
                 }
@@ -631,7 +631,7 @@ fun ReaderControls(
                 horizontalArrangement = Arrangement.Center
             ) {
                 IconButton(onClick = { onFontChange(fontSize - 10) }) {
-                    Icon(Icons.Default.TextDecrease, contentDescription = "Decrease Font")
+                    Icon(Icons.Default.TextDecrease, contentDescription = "Decrease font size")
                 }
                 Text(
                     text = "${fontSize}%",
@@ -639,7 +639,7 @@ fun ReaderControls(
                     style = MaterialTheme.typography.bodyLarge
                 )
                 IconButton(onClick = { onFontChange(fontSize + 10) }) {
-                    Icon(Icons.Default.TextIncrease, contentDescription = "Increase Font")
+                    Icon(Icons.Default.TextIncrease, contentDescription = "Increase font size")
                 }
             }
         }

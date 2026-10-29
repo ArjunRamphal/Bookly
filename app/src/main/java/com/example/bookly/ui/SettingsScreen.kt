@@ -78,7 +78,9 @@ fun SettingsScreen(
                 headlineContent = { Text("Automatic Import Folder") },
                 supportingContent = { Text(readablePath) },
                 leadingContent = { Icon(Icons.Default.FolderOpen, contentDescription = null) },
-                modifier = Modifier.clickable { folderLauncher.launch(null) }
+                modifier = Modifier.clickable(
+                    onClickLabel = "Select automatic import folder"
+                ) { folderLauncher.launch(null) }
             )
 
             HorizontalDivider()
