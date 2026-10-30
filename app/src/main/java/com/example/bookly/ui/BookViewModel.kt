@@ -167,17 +167,21 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
             val context = getApplication<Application>()
             val folder = DocumentFile.fromTreeUri(context, treeUri) ?: return@launch
             val files = folder.listFiles()
-            val existingBooks = repository.allBooks.first()
-            val deletedFiles = repository.getDeletedFileNames()
+
+            // ⚡ Bolt: Use pre-calculated sets to reduce lookup time complexity from O(N*M) to O(1)
+            // and avoid recreating the allowed extensions list on every iteration.
+            val existingTitlesSet = repository.allBooks.first().map { it.title.lowercase() }.toSet()
+            val deletedFilesSet = repository.getDeletedFileNames().toSet()
+            val allowedExtensions = setOf("pdf", "epub", "txt", "rtf")
 
             for (file in files) {
                 if (file.isDirectory) continue
                 val name = file.name ?: continue
                 val ext = name.substringAfterLast(".", "").lowercase()
-                if (ext !in listOf("pdf", "epub", "txt", "rtf")) continue
-                if (deletedFiles.contains(name)) continue
+                if (ext !in allowedExtensions) continue
+                if (deletedFilesSet.contains(name)) continue
                 val title = name.substringBeforeLast(".")
-                if (existingBooks.any { it.title.equals(title, ignoreCase = true) }) continue
+                if (existingTitlesSet.contains(title.lowercase())) continue
                 finalizeImport(file.uri, name, allowOverwrite = false)
             }
         }
