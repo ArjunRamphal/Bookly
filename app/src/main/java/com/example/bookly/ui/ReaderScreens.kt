@@ -6,6 +6,8 @@ import android.net.Uri
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.webkit.WebView
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebViewClient
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -35,6 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
+import androidx.webkit.WebViewAssetLoader
+import androidx.webkit.WebViewAssetLoader.InternalStoragePathHandler
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bookly.utils.BookUtils
 import com.github.barteksc.pdfviewer.PDFView
@@ -320,12 +324,23 @@ fun EpubReaderScreen(
                             settings.builtInZoomControls = false
                             settings.displayZoomControls = false
                             // CRITICAL: Allow WebView to access local file storage for fonts
-                            settings.allowFileAccess = true
+                            settings.allowFileAccess = false
+                            // 🛡️ Sentinel: explicitly disable file access from file URLs to prevent local file exfiltration
+                            settings.allowFileAccessFromFileURLs = false
 
                             var dragStartY = 0f
                             val OVERSCROLL_THRESHOLD = 150f
 
+                            val assetLoader = WebViewAssetLoader.Builder()
+                                .addPathHandler("/internal_dir/", InternalStoragePathHandler(context, context.filesDir))
+                                .build()
+
                             webViewClient = object : WebViewClient() {
+                                override fun shouldInterceptRequest(
+                                    view: WebView?,
+                                    request: WebResourceRequest
+                                ): WebResourceResponse? = assetLoader.shouldInterceptRequest(request.url)
+
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     super.onPageFinished(view, url)
                                     view?.evaluateJavascript(getThemeJs(isDarkMode), null)
@@ -422,8 +437,8 @@ fun EpubReaderScreen(
                         if (finalHtml != null && webView.tag != finalHtml) {
                             webView.tag = finalHtml
                             // CRITICAL: Base URL must point to files dir to load fonts
-                            val baseUrl = "file://${context.filesDir.absolutePath}/"
-                            webView.loadDataWithBaseURL(baseUrl, finalHtml, "text/html", "UTF-8", null)
+                            val baseUrl = "https://appassets.androidplatform.net/internal_dir/"
+                            webView.loadDataWithBaseURL(baseUrl, finalHtml, "text/html", "UTF-8", "https://appassets.androidplatform.net/internal_dir/")
                         }
 
                         webView.evaluateJavascript(getThemeJs(isDarkMode), null)
