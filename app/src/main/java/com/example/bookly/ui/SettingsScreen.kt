@@ -77,7 +77,7 @@ fun SettingsScreen(
             ListItem(
                 headlineContent = { Text("Automatic Import Folder") },
                 supportingContent = { Text(readablePath) },
-                leadingContent = { Icon(Icons.Default.FolderOpen, contentDescription = null) },
+                leadingContent = { Icon(Icons.Default.FolderOpen, contentDescription = "Folder Icon") },
                 modifier = Modifier.clickable { folderLauncher.launch(null) }
             )
 
@@ -102,7 +102,7 @@ fun SettingsScreen(
                         fontLauncher.launch(arrayOf("font/*", "application/x-font-ttf", "application/x-font-opentype"))
                     }
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Add, contentDescription = "Add Font", modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Add Font")
                 }
@@ -112,13 +112,13 @@ fun SettingsScreen(
                 ListItem(
                     headlineContent = { Text("No custom fonts added") },
                     supportingContent = { Text("Import .ttf or .otf files to use them in the reader.") },
-                    leadingContent = { Icon(Icons.Default.FontDownload, contentDescription = null) }
+                    leadingContent = { Icon(Icons.Default.FontDownload, contentDescription = "Font Icon") }
                 )
             } else {
                 availableFonts.forEach { fontName ->
                     ListItem(
                         headlineContent = { Text(fontName) },
-                        leadingContent = { Icon(Icons.Default.FontDownload, contentDescription = null) },
+                        leadingContent = { Icon(Icons.Default.FontDownload, contentDescription = "Font Icon") },
                         trailingContent = {
                             IconButton(onClick = { viewModel.deleteFont(fontName) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete font", tint = MaterialTheme.colorScheme.error)
