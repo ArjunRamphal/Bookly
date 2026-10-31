@@ -167,17 +167,19 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
             val context = getApplication<Application>()
             val folder = DocumentFile.fromTreeUri(context, treeUri) ?: return@launch
             val files = folder.listFiles()
-            val existingBooks = repository.allBooks.first()
-            val deletedFiles = repository.getDeletedFileNames()
+
+            // ⚡ Bolt: Use HashSets for O(1) lookups instead of O(N*M) list scanning
+            val existingBookTitles = repository.allBooks.first().map { it.title.lowercase() }.toHashSet()
+            val deletedFilesSet = repository.getDeletedFileNames().toHashSet()
 
             for (file in files) {
                 if (file.isDirectory) continue
                 val name = file.name ?: continue
                 val ext = name.substringAfterLast(".", "").lowercase()
                 if (ext !in listOf("pdf", "epub", "txt", "rtf")) continue
-                if (deletedFiles.contains(name)) continue
+                if (deletedFilesSet.contains(name)) continue
                 val title = name.substringBeforeLast(".")
-                if (existingBooks.any { it.title.equals(title, ignoreCase = true) }) continue
+                if (existingBookTitles.contains(title.lowercase())) continue
                 finalizeImport(file.uri, name, allowOverwrite = false)
             }
         }
