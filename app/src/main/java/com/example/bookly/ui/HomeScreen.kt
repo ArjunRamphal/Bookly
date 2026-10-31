@@ -116,7 +116,7 @@ fun HomeScreen(
                     onValueChange = { viewModel.onSearchQueryChanged(it) },
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("Search library...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search icon") },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
@@ -153,7 +153,7 @@ fun HomeScreen(
                             },
                             trailingIcon = {
                                 if (sortOption == SortOption.ALPHABETICAL) {
-                                    Icon(Icons.Default.Check, contentDescription = null)
+                                    Icon(Icons.Default.Check, contentDescription = "Selected")
                                 }
                             }
                         )
@@ -165,7 +165,7 @@ fun HomeScreen(
                             },
                             trailingIcon = {
                                 if (sortOption == SortOption.DATE_ADDED_DESC) {
-                                    Icon(Icons.Default.Check, contentDescription = null)
+                                    Icon(Icons.Default.Check, contentDescription = "Selected")
                                 }
                             }
                         )
@@ -177,7 +177,7 @@ fun HomeScreen(
                             },
                             trailingIcon = {
                                 if (sortOption == SortOption.DATE_ADDED_ASC) {
-                                    Icon(Icons.Default.Check, contentDescription = null)
+                                    Icon(Icons.Default.Check, contentDescription = "Selected")
                                 }
                             }
                         )
@@ -192,7 +192,7 @@ fun HomeScreen(
                             modifier = Modifier.align(Alignment.Center),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(Icons.Default.SearchOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.Gray)
+                            Icon(Icons.Default.SearchOff, contentDescription = "No results", modifier = Modifier.size(48.dp), tint = Color.Gray)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text("No books found", color = Color.Gray)
                         }
@@ -254,7 +254,9 @@ fun BookItem(
                 .height(230.dp)
                 .combinedClickable(
                     onClick = onClick,
-                    onLongClick = { showMenu = true }
+                    onClickLabel = "Open ${book.title}",
+                    onLongClick = { showMenu = true },
+                    onLongClickLabel = "Options for ${book.title}"
                 ),
             shape = RoundedCornerShape(8.dp),
             elevation = CardDefaults.cardElevation(4.dp)
@@ -270,7 +272,7 @@ fun BookItem(
                     if (book.coverImage != null) {
                         AsyncImage(
                             model = book.coverImage,
-                            contentDescription = "Cover",
+                            contentDescription = "Cover for ${book.title}",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
@@ -329,7 +331,7 @@ fun BookItem(
                     showRenameDialog = true
                 },
                 leadingIcon = {
-                    Icon(Icons.Default.Edit, contentDescription = null)
+                    Icon(Icons.Default.Edit, contentDescription = "Rename Book")
                 }
             )
 
@@ -340,7 +342,7 @@ fun BookItem(
                     showResetConfirm = true
                 },
                 leadingIcon = {
-                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Icon(Icons.Default.Refresh, contentDescription = "Reset Progress")
                 }
             )
 
@@ -351,7 +353,7 @@ fun BookItem(
                     showDeleteConfirm = true
                 },
                 leadingIcon = {
-                    Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red)
+                    Icon(Icons.Default.Delete, contentDescription = "Delete Book", tint = Color.Red)
                 }
             )
         }
@@ -460,7 +462,7 @@ fun EmptyState(padding: PaddingValues, onAddClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.Default.Book,
-            contentDescription = null,
+            contentDescription = "Empty library",
             modifier = Modifier.size(64.dp),
             tint = Color.Gray
         )
@@ -468,7 +470,7 @@ fun EmptyState(padding: PaddingValues, onAddClick: () -> Unit) {
         Text(text = "Your library is empty.", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedButton(onClick = onAddClick) {
-            Icon(Icons.Default.Add, contentDescription = null)
+            Icon(Icons.Default.Add, contentDescription = "Add a Book")
             Spacer(modifier = Modifier.width(8.dp))
             Text("Add a Book")
         }
