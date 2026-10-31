@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.remote.creation.core)
+    implementation("androidx.webkit:webkit:1.9.0")
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.documentfile)
     testImplementation(libs.junit)

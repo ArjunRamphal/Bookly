@@ -2,3 +2,8 @@
 **Vulnerability:** Found Path Traversal vulnerability when importing books/fonts where the app retrieves the filename from the content provider using `OpenableColumns.DISPLAY_NAME`. If a malicious content provider returned a filename like `../../shared_prefs/prefs.xml`, it could overwrite files in the app's internal directory.
 **Learning:** External intents and content providers cannot be trusted. Even basic file import functions require directory validation if they rely on metadata from outside the app container.
 **Prevention:** Always sanitize incoming paths with `File(rawName).name` and validate the destination directory using `canonicalPath.startsWith(safeDirectory.canonicalPath)`.
+
+## 2024-10-30 - Prevent WebView Local File Exfiltration
+**Vulnerability:** Found `settings.allowFileAccess = true` enabled in the eBook Reader's WebView to supposedly allow loading fonts from local storage. This is a critical security vulnerability that allows an attacker to load a malicious file (e.g., EPUB containing malicious HTML/JS) which then reads sensitive files from the app's internal storage (`file://`) and exfiltrates them via JavaScript.
+**Learning:** Never enable `allowFileAccess` or `allowFileAccessFromFileURLs` in WebView if the WebView is rendering content that is potentially untrusted or can execute JavaScript. Even if the intention is benign (e.g. loading local fonts or assets), it introduces path traversal and file exfiltration risks.
+**Prevention:** Explicitly disable local file access by setting both `settings.allowFileAccess = false` and `settings.allowFileAccessFromFileURLs = false` for any WebView handling untrusted input. If local assets like fonts need to be provided, use `WebViewAssetLoader` or a custom `ContentProvider` instead.
