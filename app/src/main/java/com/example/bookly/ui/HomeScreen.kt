@@ -254,7 +254,9 @@ fun BookItem(
                 .height(230.dp)
                 .combinedClickable(
                     onClick = onClick,
-                    onLongClick = { showMenu = true }
+                    onClickLabel = "Open ${book.title}",
+                    onLongClick = { showMenu = true },
+                    onLongClickLabel = "Show options for ${book.title}"
                 ),
             shape = RoundedCornerShape(8.dp),
             elevation = CardDefaults.cardElevation(4.dp)
@@ -421,7 +423,10 @@ fun BookItem(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .combinedClickable(onClick = { deleteFromDevice = !deleteFromDevice })
+                            .combinedClickable(
+                                onClick = { deleteFromDevice = !deleteFromDevice },
+                                onClickLabel = "Toggle device file deletion"
+                            )
                     ) {
                         Checkbox(
                             checked = deleteFromDevice,
