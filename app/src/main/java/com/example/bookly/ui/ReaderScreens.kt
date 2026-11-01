@@ -648,7 +648,10 @@ fun ReaderControls(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
-                IconButton(onClick = { onFontChange(fontSize - 10) }) {
+                IconButton(
+                    onClick = { onFontChange(fontSize - 10) },
+                    enabled = fontSize > 50
+                ) {
                     Icon(Icons.Default.TextDecrease, contentDescription = "Decrease Font")
                 }
                 Text(
@@ -656,7 +659,10 @@ fun ReaderControls(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     style = MaterialTheme.typography.bodyLarge
                 )
-                IconButton(onClick = { onFontChange(fontSize + 10) }) {
+                IconButton(
+                    onClick = { onFontChange(fontSize + 10) },
+                    enabled = fontSize < 200
+                ) {
                     Icon(Icons.Default.TextIncrease, contentDescription = "Increase Font")
                 }
             }
