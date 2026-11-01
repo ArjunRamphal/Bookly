@@ -5,3 +5,7 @@
 ## 2024-05-24 - O(N*M) bottlenecks during directory scanning
 **Learning:** Checking for string matches within a loop using `.any {}` on a list of objects or `.contains()` on a List results in O(N*M) time complexity. Also allocating new instances of `listOf` on each iteration is unnecessarily wasteful.
 **Action:** Convert lists to `Set` before loops to achieve O(1) lookups and O(N) overall complexity. Declare static sets of constant primitives outside the loop.
+
+## 2024-05-24 - String manipulation bottlenecks during text parsing
+**Learning:** Chaining multiple `.replace()` calls on a large string (like book content) requires multiple passes and allocates multiple large intermediate strings in memory, leading to high CPU usage and garbage collection overhead.
+**Action:** Replace multiple `.replace()` calls on large strings with a single-pass `StringBuilder` loop to minimize memory allocation and processing time.

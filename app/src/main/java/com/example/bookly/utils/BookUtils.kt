@@ -85,10 +85,18 @@ object BookUtils {
             val inputStream = getInputStream(context, uri) ?: return "<h3>Error: Cannot open file</h3>"
             val rawText = inputStream.bufferedReader().use { it.readText() }
 
-            val safeText = rawText
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
+            // ⚡ Bolt: Using a single-pass StringBuilder avoids allocating multiple intermediate string copies, significantly reducing memory/GC overhead and improving performance for large text files.
+            val sb = StringBuilder(rawText.length + (rawText.length / 10))
+            for (i in rawText.indices) {
+                val c = rawText[i]
+                when (c) {
+                    '<' -> sb.append("&lt;")
+                    '>' -> sb.append("&gt;")
+                    '&' -> sb.append("&amp;")
+                    else -> sb.append(c)
+                }
+            }
+            val safeText = sb.toString()
 
             """
             <html>
