@@ -59,6 +59,7 @@ object BookUtils {
         return """
             <html>
             <head>
+                <meta http-equiv="Content-Security-Policy" content="script-src 'none';">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
                 <style>
                     html, body {
@@ -101,6 +102,7 @@ object BookUtils {
             """
             <html>
             <head>
+                <meta http-equiv="Content-Security-Policy" content="script-src 'none';">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
                 <style>
                     * { max-width: 100% !important; box-sizing: border-box !important; }

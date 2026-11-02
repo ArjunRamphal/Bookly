@@ -177,6 +177,7 @@ fun EpubReaderScreen(
             """
             <html>
             <head>
+            <meta http-equiv="Content-Security-Policy" content="script-src 'none';">
             <style>
                 @font-face {
                     font-family: 'CustomFont';
@@ -327,6 +328,7 @@ fun EpubReaderScreen(
                             settings.allowFileAccess = false
                             // 🛡️ Sentinel: explicitly disable file access from file URLs to prevent local file exfiltration
                             settings.allowFileAccessFromFileURLs = false
+                            settings.allowUniversalAccessFromFileURLs = false
 
                             var dragStartY = 0f
                             val OVERSCROLL_THRESHOLD = 150f
