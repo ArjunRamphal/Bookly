@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -423,11 +425,15 @@ fun BookItem(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .combinedClickable(onClick = { deleteFromDevice = !deleteFromDevice })
+                            .toggleable(
+                                value = deleteFromDevice,
+                                onValueChange = { deleteFromDevice = it },
+                                role = Role.Checkbox
+                            )
                     ) {
                         Checkbox(
                             checked = deleteFromDevice,
-                            onCheckedChange = { deleteFromDevice = it }
+                            onCheckedChange = null
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
