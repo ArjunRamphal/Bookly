@@ -285,65 +285,68 @@ object BookUtils {
 
     // --- FIXED: IMAGE INJECTION ---
     private fun injectImages(html: String, book: Book, currentHref: String): String {
-        var modifiedHtml = html
+        // ⚡ Bolt: Use Matcher.appendReplacement with StringBuffer to apply all replacements in a single pass.
+        // This avoids chaining multiple String.replace() calls which creates large intermediate
+        // strings and causes huge GC overhead and O(N*M) bottlenecks during text parsing for large chapters.
 
         // FIX 1: Match 'src', 'href', and 'xlink:href' attributes
         // This is crucial because SVG wrappers in EPUBs often use xlink:href instead of src.
-        // We look for any attribute ending in 'href' or 'src'.
-        val pattern = Pattern.compile("(src|href|xlink:href)=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE)
+        // We look for any attribute ending in 'href' or 'src' and capture the quotation mark to preserve it.
+        val pattern = Pattern.compile("(src|href|xlink:href)=([\"'])([^\"']+)[\"']", Pattern.CASE_INSENSITIVE)
         val matcher = pattern.matcher(html)
 
-        val replacements = mutableMapOf<String, String>()
+        val sb = StringBuffer()
 
         while (matcher.find()) {
-            // Group 2 contains the path (e.g. "../Images/cover.jpg")
-            val originalSrc = matcher.group(2) ?: continue
+            val attr = matcher.group(1)
+            val quote = matcher.group(2)
+            // Group 3 contains the path (e.g. "../Images/cover.jpg")
+            val originalSrc = matcher.group(3)
 
-            // Skip external links or already encoded data
-            if (originalSrc.startsWith("http") || originalSrc.startsWith("data:") || originalSrc.startsWith("#")) continue
+            var replacement = matcher.group(0)
 
-            val decodedSrc = try { URLDecoder.decode(originalSrc, "UTF-8") } catch (e: Exception) { originalSrc }
+            if (originalSrc != null && !originalSrc.startsWith("http") && !originalSrc.startsWith("data:") && !originalSrc.startsWith("#")) {
+                val decodedSrc = try { URLDecoder.decode(originalSrc, "UTF-8") } catch (e: Exception) { originalSrc }
 
-            // Resolve relative path (e.g. "../Images/img.jpg" -> "Images/img.jpg")
-            val resolvedHref = resolveRelativePath(currentHref, decodedSrc)
+                // Resolve relative path (e.g. "../Images/img.jpg" -> "Images/img.jpg")
+                val resolvedHref = resolveRelativePath(currentHref, decodedSrc)
 
-            // Try to find the resource in the book
-            val imageResource = findResourceRobust(book, resolvedHref)
+                // Try to find the resource in the book
+                val imageResource = findResourceRobust(book, resolvedHref)
 
-            if (imageResource != null) {
-                // FIX 2: Verify it is actually an image before replacing
-                // We don't want to break navigation links (<a href="chapter2.html">)
-                val isImage = resolvedHref.endsWith(".jpg", true) ||
-                        resolvedHref.endsWith(".jpeg", true) ||
-                        resolvedHref.endsWith(".png", true) ||
-                        resolvedHref.endsWith(".gif", true) ||
-                        resolvedHref.endsWith(".svg", true)
+                if (imageResource != null) {
+                    // FIX 2: Verify it is actually an image before replacing
+                    // We don't want to break navigation links (<a href="chapter2.html">)
+                    val isImage = resolvedHref.endsWith(".jpg", true) ||
+                            resolvedHref.endsWith(".jpeg", true) ||
+                            resolvedHref.endsWith(".png", true) ||
+                            resolvedHref.endsWith(".gif", true) ||
+                            resolvedHref.endsWith(".svg", true)
 
-                if (isImage) {
-                    try {
-                        val b64 = Base64.encodeToString(imageResource.data, Base64.NO_WRAP)
-                        val mimeType = when {
-                            resolvedHref.endsWith(".png", true) -> "image/png"
-                            resolvedHref.endsWith(".gif", true) -> "image/gif"
-                            resolvedHref.endsWith(".svg", true) -> "image/svg+xml"
-                            else -> "image/jpeg"
+                    if (isImage) {
+                        try {
+                            val b64 = Base64.encodeToString(imageResource.data, Base64.NO_WRAP)
+                            val mimeType = when {
+                                resolvedHref.endsWith(".png", true) -> "image/png"
+                                resolvedHref.endsWith(".gif", true) -> "image/gif"
+                                resolvedHref.endsWith(".svg", true) -> "image/svg+xml"
+                                else -> "image/jpeg"
+                            }
+                            // Replace the original path with the Base64 data URI
+                            val newSrc = "data:$mimeType;base64,$b64"
+                            replacement = "$attr=$quote$newSrc$quote"
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
-                        // We replace the path with the Base64 data URI
-                        replacements[originalSrc] = "data:$mimeType;base64,$b64"
-                    } catch (e: Exception) {
-                        e.printStackTrace()
                     }
                 }
             }
+
+            matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement))
         }
 
-        // Apply replacements
-        for ((oldSrc, newSrc) in replacements) {
-            // We use simple string replacement which is safer than regex replacement for the content
-            modifiedHtml = modifiedHtml.replace("=\"$oldSrc\"", "=\"$newSrc\"")
-            modifiedHtml = modifiedHtml.replace("='$oldSrc'", "='$newSrc'")
-        }
-        return modifiedHtml
+        matcher.appendTail(sb)
+        return sb.toString()
     }
 
     private fun findResourceRobust(book: Book, href: String): Resource? {
