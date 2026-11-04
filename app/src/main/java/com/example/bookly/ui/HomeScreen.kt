@@ -391,7 +391,9 @@ fun BookItem(
                     value = newName,
                     onValueChange = { newName = it },
                     label = { Text("Title") },
-                    singleLine = true
+                    singleLine = true,
+                    isError = newName.isBlank(),
+                    supportingText = { if (newName.isBlank()) Text("Title cannot be empty") }
                 )
             },
             confirmButton = {
@@ -401,7 +403,8 @@ fun BookItem(
                             onRename(newName)
                             showRenameDialog = false
                         }
-                    }
+                    },
+                    enabled = newName.isNotBlank()
                 ) { Text("Save") }
             },
             dismissButton = {
