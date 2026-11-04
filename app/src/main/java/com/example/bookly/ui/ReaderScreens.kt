@@ -548,6 +548,7 @@ fun ChapterNavigation(
     }
 
     if (showDialog) {
+        val isInvalid = inputValue.isNotEmpty() && (inputValue.toIntOrNull() == null || inputValue.toIntOrNull() !in 1..total)
         AlertDialog(
             onDismissRequest = { showDialog = false },
             title = { Text("Go to Chapter") },
@@ -560,7 +561,9 @@ fun ChapterNavigation(
                         onValueChange = { if (it.all { char -> char.isDigit() }) inputValue = it },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = isInvalid,
+                        supportingText = { if (isInvalid) Text("Enter a valid chapter between 1 and $total") }
                     )
                 }
             },
@@ -573,7 +576,7 @@ fun ChapterNavigation(
                             showDialog = false
                         }
                     },
-                    enabled = inputValue.isNotEmpty()
+                    enabled = inputValue.isNotEmpty() && !isInvalid
                 ) {
                     Text("Go")
                 }
