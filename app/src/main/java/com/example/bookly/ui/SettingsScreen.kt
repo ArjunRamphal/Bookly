@@ -116,15 +116,18 @@ fun SettingsScreen(
                 )
             } else {
                 availableFonts.forEach { fontName ->
-                    ListItem(
-                        headlineContent = { Text(fontName) },
-                        leadingContent = { Icon(Icons.Default.FontDownload, contentDescription = "Font Icon") },
-                        trailingContent = {
-                            IconButton(onClick = { viewModel.deleteFont(fontName) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete font", tint = MaterialTheme.colorScheme.error)
+                    // ⚡ Bolt: Adding key() prevents unnecessary recompositions and improves rendering performance when elements are updated
+                    key(fontName) {
+                        ListItem(
+                            headlineContent = { Text(fontName) },
+                            leadingContent = { Icon(Icons.Default.FontDownload, contentDescription = "Font Icon") },
+                            trailingContent = {
+                                IconButton(onClick = { viewModel.deleteFont(fontName) }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete font", tint = MaterialTheme.colorScheme.error)
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
