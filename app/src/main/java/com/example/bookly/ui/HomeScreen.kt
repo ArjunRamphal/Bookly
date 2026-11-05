@@ -333,7 +333,7 @@ fun BookItem(
                     showRenameDialog = true
                 },
                 leadingIcon = {
-                    Icon(Icons.Default.Edit, contentDescription = "Rename Book")
+                    Icon(Icons.Default.Edit, contentDescription = null)
                 }
             )
 
@@ -344,7 +344,7 @@ fun BookItem(
                     showResetConfirm = true
                 },
                 leadingIcon = {
-                    Icon(Icons.Default.Refresh, contentDescription = "Reset Progress")
+                    Icon(Icons.Default.Refresh, contentDescription = null)
                 }
             )
 
@@ -355,7 +355,7 @@ fun BookItem(
                     showDeleteConfirm = true
                 },
                 leadingIcon = {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete Book", tint = Color.Red)
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red)
                 }
             )
         }
@@ -479,7 +479,7 @@ fun EmptyState(padding: PaddingValues, onAddClick: () -> Unit) {
         Text(text = "Your library is empty.", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedButton(onClick = onAddClick) {
-            Icon(Icons.Default.Add, contentDescription = "Add a Book")
+            Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text("Add a Book")
         }
