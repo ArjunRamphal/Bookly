@@ -5,3 +5,7 @@
 ## 2024-05-19 - Compose AlertDialog Inline Validation
 **Learning:** When using inputs (`OutlinedTextField`) within Compose `AlertDialog`s, disabling the primary action button without context leads to a poor user experience. Users may not understand why they cannot proceed.
 **Action:** Always provide inline validation feedback using `isError` and `supportingText` in the text field to clearly explain why the input is invalid, alongside disabling the action button.
+
+## 2024-05-20 - Redundant Screen Reader Announcements for Decorative Icons
+**Learning:** Adding a `contentDescription` to icons that are adjacent to descriptive text (e.g., in a `DropdownMenuItem` or a `Button` with a text label) causes screen readers like TalkBack to read the description twice (once for the icon, once for the text).
+**Action:** Always set `contentDescription = null` for decorative icons that are paired with visible, descriptive text to prevent redundant announcements and improve the screen reader experience.
