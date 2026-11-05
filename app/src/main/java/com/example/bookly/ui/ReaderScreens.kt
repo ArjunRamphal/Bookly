@@ -163,6 +163,11 @@ fun EpubReaderScreen(
     // Live Progress (0-100%)
     var globalProgressPercent by remember { mutableFloatStateOf(initialProgress) }
 
+    // ⚡ Bolt: Use derivedStateOf to prevent recomposition on every scroll frame (when the integer % hasn't changed)
+    val displayProgressPercent by remember {
+        derivedStateOf { globalProgressPercent.toInt() }
+    }
+
     fun getThemeJs(dark: Boolean): String {
         return if (dark) "document.body.style.backgroundColor = '#121212'; document.body.style.color = '#e0e0e0';"
         else "document.body.style.backgroundColor = '#ffffff'; document.body.style.color = '#000000';"
@@ -448,7 +453,7 @@ fun EpubReaderScreen(
                 )
 
                 ReadingStatusBar(
-                    progress = globalProgressPercent.toInt(),
+                    progress = displayProgressPercent,
                     isDarkMode = isDarkMode,
                     modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                 )

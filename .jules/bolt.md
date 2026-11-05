@@ -13,3 +13,7 @@
 ## 2024-05-24 - HTML string replacement bottleneck
 **Learning:** Using chained or looped `String.replace()` operations on large strings like HTML content from EPUBs causes $O(N \cdot M)$ time complexity and massive memory/GC overhead because strings are immutable in Kotlin/Java.
 **Action:** Always use `Matcher.appendReplacement()` with a `StringBuffer` or a single-pass `StringBuilder` loop when performing multiple substring replacements in a large body of text.
+
+## 2026-11-05 - Optimize high-frequency state updates with derivedStateOf
+**Learning:** In Jetpack Compose, avoiding unnecessary recompositions during continuous events like scrolling is critical. Passing a highly variable state like a Float directly into a UI component that only needs an Int causes the component to recompose on every tiny change, even when the UI output remains identical.
+**Action:** Always use `derivedStateOf` to convert a highly fluctuating state (like a raw scroll position or float progress) into a less frequently changing state (like an integer percentage). Read only the derived state in UI components.
