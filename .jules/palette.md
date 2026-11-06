@@ -9,3 +9,7 @@
 ## 2024-05-20 - Redundant Screen Reader Announcements for Decorative Icons
 **Learning:** Adding a `contentDescription` to icons that are adjacent to descriptive text (e.g., in a `DropdownMenuItem` or a `Button` with a text label) causes screen readers like TalkBack to read the description twice (once for the icon, once for the text).
 **Action:** Always set `contentDescription = null` for decorative icons that are paired with visible, descriptive text to prevent redundant announcements and improve the screen reader experience.
+
+## 2024-05-22 - Missing Screen Reader Context on Generic Interactables
+**Learning:** Using the generic `clickable` modifier on layout components (like `Box` or `Row`) without providing accessibility semantics leaves screen reader users without context. TalkBack will announce it as generic text that can be clicked, but won't explain the action or role.
+**Action:** Always supplement `clickable` modifiers on generic components with an explicit `onClickLabel` and `role` (e.g., `Role.Button`) to ensure proper context and expectations for screen reader users.
