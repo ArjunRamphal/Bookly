@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.semantics.Role
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -478,7 +479,10 @@ fun EpubReaderScreen(
                             trailingContent = {
                                 if (selectedFont == null) Icon(Icons.Default.Check, contentDescription = "Selected")
                             },
-                            modifier = Modifier.clickable {
+                            modifier = Modifier.clickable(
+                                onClickLabel = "Select default system font",
+                                role = Role.RadioButton
+                            ) {
                                 viewModel.selectFont(null)
                                 showFontSheet = false
                             }
@@ -495,7 +499,10 @@ fun EpubReaderScreen(
                             trailingContent = {
                                 if (selectedFont == fontName) Icon(Icons.Default.Check, contentDescription = "Selected")
                             },
-                            modifier = Modifier.clickable {
+                            modifier = Modifier.clickable(
+                                onClickLabel = "Select $fontName font",
+                                role = Role.RadioButton
+                            ) {
                                 viewModel.selectFont(fontName)
                                 showFontSheet = false
                             }
@@ -535,7 +542,10 @@ fun ChapterNavigation(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(4.dp))
-                    .clickable {
+                    .clickable(
+                        onClickLabel = "Jump to chapter",
+                        role = Role.Button
+                    ) {
                         inputValue = ""
                         showDialog = true
                     }

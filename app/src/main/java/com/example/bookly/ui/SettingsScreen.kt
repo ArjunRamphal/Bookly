@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.semantics.Role
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -78,7 +79,10 @@ fun SettingsScreen(
                 headlineContent = { Text("Automatic Import Folder") },
                 supportingContent = { Text(readablePath) },
                 leadingContent = { Icon(Icons.Default.FolderOpen, contentDescription = null) },
-                modifier = Modifier.clickable { folderLauncher.launch(null) }
+                modifier = Modifier.clickable(
+                    onClickLabel = "Select automatic import folder",
+                    role = Role.Button
+                ) { folderLauncher.launch(null) }
             )
 
             HorizontalDivider()
