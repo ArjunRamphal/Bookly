@@ -45,6 +45,7 @@ import com.example.bookly.utils.BookUtils
 import com.github.barteksc.pdfviewer.PDFView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 // --- PDF READER (Unchanged) ---
 @Composable
@@ -187,7 +188,7 @@ fun EpubReaderScreen(
             <style>
                 @font-face {
                     font-family: 'CustomFont';
-                    src: url('fonts/$selectedFont');
+                    src: url('$selectedFont');
                 }
                 body, p, div, span, h1, h2, h3, h4, h5, h6 {
                     font-family: 'CustomFont', sans-serif !important;
@@ -340,7 +341,8 @@ fun EpubReaderScreen(
                             val OVERSCROLL_THRESHOLD = 150f
 
                             val assetLoader = WebViewAssetLoader.Builder()
-                                .addPathHandler("/internal_dir/", InternalStoragePathHandler(context, context.filesDir))
+                                // 🛡️ Sentinel: Only expose the fonts directory, not the entire filesDir
+                                .addPathHandler("/fonts/", InternalStoragePathHandler(context, File(context.filesDir, "fonts")))
                                 .build()
 
                             webViewClient = object : WebViewClient() {
@@ -445,8 +447,8 @@ fun EpubReaderScreen(
                         if (finalHtml != null && webView.tag != finalHtml) {
                             webView.tag = finalHtml
                             // CRITICAL: Base URL must point to files dir to load fonts
-                            val baseUrl = "https://appassets.androidplatform.net/internal_dir/"
-                            webView.loadDataWithBaseURL(baseUrl, finalHtml, "text/html", "UTF-8", "https://appassets.androidplatform.net/internal_dir/")
+                            val baseUrl = "https://appassets.androidplatform.net/fonts/"
+                            webView.loadDataWithBaseURL(baseUrl, finalHtml, "text/html", "UTF-8", baseUrl)
                         }
 
                         webView.evaluateJavascript(getThemeJs(isDarkMode), null)
