@@ -17,3 +17,7 @@
 ## 2026-11-05 - Optimize high-frequency state updates with derivedStateOf
 **Learning:** In Jetpack Compose, avoiding unnecessary recompositions during continuous events like scrolling is critical. Passing a highly variable state like a Float directly into a UI component that only needs an Int causes the component to recompose on every tiny change, even when the UI output remains identical.
 **Action:** Always use `derivedStateOf` to convert a highly fluctuating state (like a raw scroll position or float progress) into a less frequently changing state (like an integer percentage). Read only the derived state in UI components.
+
+## 2024-05-24 - Cache Expensive Parsed Objects
+**Learning:** Re-parsing an entire EPUB (unzipping and XML parsing) on every chapter navigation blocks the main thread and causes severe UI stuttering.
+**Action:** Use a `SoftReference` cache to hold the most recently parsed `Book` object to eliminate redundant file I/O and parsing while allowing the Garbage Collector to reclaim memory if needed.

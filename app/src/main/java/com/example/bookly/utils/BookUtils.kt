@@ -10,22 +10,41 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.lang.ref.SoftReference
 import java.net.URLDecoder
 import java.nio.charset.Charset
 import java.util.regex.Pattern
 
 object BookUtils {
 
+    // ⚡ Bolt: Cache the most recently parsed EPUB using a SoftReference.
+    // Re-parsing an entire EPUB (unzipping and XML parsing) on every chapter navigation
+    // blocks the main thread and causes severe UI stuttering. SoftReference allows the GC
+    // to reclaim it under memory pressure while providing a massive speed boost during reading.
+    private var cachedBookUri: Uri? = null
+    private var cachedBook: SoftReference<Book>? = null
+
     // --- HELPER: OPEN BOOK ---
     fun getBook(context: Context, uri: Uri): Book? {
+        if (uri == cachedBookUri) {
+            val book = cachedBook?.get()
+            if (book != null) return book
+        }
+
         try {
             val inputStream = getInputStream(context, uri) ?: return null
-            return EpubReader().readEpub(inputStream)
+            val book = EpubReader().readEpub(inputStream)
+            cachedBookUri = uri
+            cachedBook = SoftReference(book)
+            return book
         } catch (e: Exception) { e.printStackTrace() }
 
         try {
             val inputStream = getInputStream(context, uri) ?: return null
-            return EpubReader().readEpub(inputStream, "ISO-8859-1")
+            val book = EpubReader().readEpub(inputStream, "ISO-8859-1")
+            cachedBookUri = uri
+            cachedBook = SoftReference(book)
+            return book
         } catch (e: Exception) { e.printStackTrace() }
 
         return null
