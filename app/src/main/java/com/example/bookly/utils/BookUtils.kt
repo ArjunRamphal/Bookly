@@ -10,25 +10,49 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.lang.ref.SoftReference
 import java.net.URLDecoder
 import java.nio.charset.Charset
+import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.Pattern
 
 object BookUtils {
 
+    // ⚡ Bolt: Cache parsed EPUB files using SoftReference to eliminate redundant file I/O and parsing,
+    // which significantly reduces CPU usage on chapter transitions, while allowing the GC to reclaim memory if needed.
+    private val bookCache = ConcurrentHashMap<String, SoftReference<Book>>()
+
     // --- HELPER: OPEN BOOK ---
     fun getBook(context: Context, uri: Uri): Book? {
-        try {
-            val inputStream = getInputStream(context, uri) ?: return null
-            return EpubReader().readEpub(inputStream)
-        } catch (e: Exception) { e.printStackTrace() }
+        val uriString = uri.toString()
+        val cachedBook = bookCache[uriString]?.get()
+        if (cachedBook != null) {
+            return cachedBook
+        }
+
+        var parsedBook: Book? = null
 
         try {
-            val inputStream = getInputStream(context, uri) ?: return null
-            return EpubReader().readEpub(inputStream, "ISO-8859-1")
+            val inputStream = getInputStream(context, uri)
+            if (inputStream != null) {
+                parsedBook = EpubReader().readEpub(inputStream)
+            }
         } catch (e: Exception) { e.printStackTrace() }
 
-        return null
+        if (parsedBook == null) {
+            try {
+                val inputStream = getInputStream(context, uri)
+                if (inputStream != null) {
+                    parsedBook = EpubReader().readEpub(inputStream, "ISO-8859-1")
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+
+        if (parsedBook != null) {
+            bookCache[uriString] = SoftReference(parsedBook)
+        }
+
+        return parsedBook
     }
 
     // --- 1. GET CHAPTER LIST ---
