@@ -481,7 +481,10 @@ fun EpubReaderScreen(
                             trailingContent = {
                                 if (selectedFont == null) Icon(Icons.Default.Check, contentDescription = "Selected")
                             },
-                            modifier = Modifier.clickable {
+                            modifier = Modifier.clickable(
+                                onClickLabel = "Select Default System Font",
+                                role = Role.Button
+                            ) {
                                 viewModel.selectFont(null)
                                 showFontSheet = false
                             }
@@ -498,7 +501,10 @@ fun EpubReaderScreen(
                             trailingContent = {
                                 if (selectedFont == fontName) Icon(Icons.Default.Check, contentDescription = "Selected")
                             },
-                            modifier = Modifier.clickable {
+                            modifier = Modifier.clickable(
+                                onClickLabel = "Select $fontName font",
+                                role = Role.Button
+                            ) {
                                 viewModel.selectFont(fontName)
                                 showFontSheet = false
                             }
