@@ -19,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
@@ -78,7 +79,10 @@ fun SettingsScreen(
                 headlineContent = { Text("Automatic Import Folder") },
                 supportingContent = { Text(readablePath) },
                 leadingContent = { Icon(Icons.Default.FolderOpen, contentDescription = null) },
-                modifier = Modifier.clickable { folderLauncher.launch(null) }
+                modifier = Modifier.clickable(
+                    onClickLabel = "Select automatic import folder",
+                    role = Role.Button
+                ) { folderLauncher.launch(null) }
             )
 
             HorizontalDivider()
