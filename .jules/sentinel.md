@@ -17,3 +17,8 @@
 **Vulnerability:** WebViewAssetLoader was exposing the entire application `filesDir` via `/internal_dir/` when only custom fonts needed to be loaded.
 **Learning:** `InternalStoragePathHandler` allows local file access via standard web URLs. If exposed too broadly, an attacker who can inject content (e.g. malicious EPUBs) could potentially read any file in the app's internal storage.
 **Prevention:** Always restrict `WebViewAssetLoader` path handlers to the most specific subdirectory required (e.g. `File(context.filesDir, "fonts")`). Use least privilege principles for local assets.
+
+## 2025-02-09 - Prevent WebView Intent Injection and Unwanted External Requests
+**Vulnerability:** The WebView in `EpubReaderScreen` did not override `shouldOverrideUrlLoading` or block unauthorized HTTP/HTTPS requests in `shouldInterceptRequest`. An attacker could embed a malicious link in an EPUB file (e.g., `intent://`, `tel:`, or an external malicious URL) which, if clicked or automatically loaded, could trigger unintended intents or leak information (SSRF/tracking).
+**Learning:** By default, Android WebViews may attempt to handle custom URL schemes by launching intents, which can lead to Intent Injection vulnerabilities if the content is untrusted. Additionally, allowing the WebView to make arbitrary external network requests from untrusted HTML can lead to privacy leaks or SSRF.
+**Prevention:** Always override `shouldOverrideUrlLoading` to explicitly block or handle only specific, safe URLs (like an internal `baseUrl`). Furthermore, in `shouldInterceptRequest`, intercept and block any unexpected HTTP/HTTPS requests (e.g., by returning an empty `WebResourceResponse`) to enforce that only local assets are loaded.

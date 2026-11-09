@@ -349,7 +349,22 @@ fun EpubReaderScreen(
                                 override fun shouldInterceptRequest(
                                     view: WebView?,
                                     request: WebResourceRequest
-                                ): WebResourceResponse? = assetLoader.shouldInterceptRequest(request.url)
+                                ): WebResourceResponse? {
+                                    // 🛡️ Sentinel: Block unhandled external network requests to prevent SSRF and tracking
+                                    val url = request.url.toString()
+                                    if (url.startsWith("https://appassets.androidplatform.net/")) {
+                                        return assetLoader.shouldInterceptRequest(request.url)
+                                    }
+                                    return WebResourceResponse("text/plain", "UTF-8", null)
+                                }
+
+                                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                    // 🛡️ Sentinel: Block any navigation that doesn't start with the internal baseUrl (prevent intent injection)
+                                    if (request?.url?.toString()?.startsWith("https://appassets.androidplatform.net/") == true) {
+                                        return false
+                                    }
+                                    return true
+                                }
 
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     super.onPageFinished(view, url)
