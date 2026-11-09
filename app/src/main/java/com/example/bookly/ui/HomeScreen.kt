@@ -118,7 +118,7 @@ fun HomeScreen(
                     onValueChange = { viewModel.onSearchQueryChanged(it) },
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("Search library...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search icon") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
@@ -194,7 +194,7 @@ fun HomeScreen(
                             modifier = Modifier.align(Alignment.Center),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(Icons.Default.SearchOff, contentDescription = "No results", modifier = Modifier.size(48.dp), tint = Color.Gray)
+                            Icon(Icons.Default.SearchOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.Gray)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text("No books found", color = Color.Gray)
                         }
@@ -471,7 +471,7 @@ fun EmptyState(padding: PaddingValues, onAddClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.Default.Book,
-            contentDescription = "Empty library",
+            contentDescription = null,
             modifier = Modifier.size(64.dp),
             tint = Color.Gray
         )
