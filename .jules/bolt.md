@@ -21,3 +21,7 @@
 ## 2024-05-24 - Cache Expensive Parsed Objects
 **Learning:** Re-parsing an entire EPUB (unzipping and XML parsing) on every chapter navigation blocks the main thread and causes severe UI stuttering.
 **Action:** Use a `SoftReference` cache to hold the most recently parsed `Book` object to eliminate redundant file I/O and parsing while allowing the Garbage Collector to reclaim memory if needed.
+
+## 2026-11-05 - Avoid Regex Recompilation in Loops/Hot Paths
+**Learning:** Recompiling a regular expression (using `.toRegex()` or `Pattern.compile()`) inside a loop or a frequently called function (like rendering an EPUB chapter) adds unnecessary CPU overhead.
+**Action:** Extract regular expressions into statically compiled properties (e.g. at the `object` level or inside a `companion object`) to compile them only once.

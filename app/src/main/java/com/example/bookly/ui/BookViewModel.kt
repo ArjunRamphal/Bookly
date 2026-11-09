@@ -37,6 +37,11 @@ enum class SortOption {
 
 class BookViewModel(application: Application) : AndroidViewModel(application) {
 
+    companion object {
+        // ⚡ Bolt: Precompile the regex here to avoid recompiling it for every imported book file.
+        private val SAFE_FILENAME_REGEX = "[^a-zA-Z0-9]".toRegex()
+    }
+
     private val repository: BookRepository
     private val prefs = application.getSharedPreferences("bookly_prefs", Context.MODE_PRIVATE)
 
@@ -262,7 +267,7 @@ class BookViewModel(application: Application) : AndroidViewModel(application) {
             val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
             page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             page.close(); renderer.close(); fileDescriptor.close()
-            val safeName = title.replace("[^a-zA-Z0-9]".toRegex(), "_")
+            val safeName = title.replace(SAFE_FILENAME_REGEX, "_")
             val coverFile = File(context.filesDir, "${safeName}_cover.jpg")
             FileOutputStream(coverFile).use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 80, out) }
             "file://${coverFile.absolutePath}"
