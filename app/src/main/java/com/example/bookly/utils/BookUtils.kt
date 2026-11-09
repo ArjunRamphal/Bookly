@@ -24,6 +24,11 @@ object BookUtils {
     private var cachedBookUri: Uri? = null
     private var cachedBook: SoftReference<Book>? = null
 
+    // ⚡ Bolt: Precompile regular expressions at the object level to avoid recompiling
+    // them inside frequently called functions (like extractCoverImage or injectImages)
+    private val SAFE_FILENAME_REGEX = "[^a-zA-Z0-9]".toRegex()
+    private val INJECT_IMAGES_REGEX = Pattern.compile("(src|href|xlink:href)=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE)
+
     // --- HELPER: OPEN BOOK ---
     fun getBook(context: Context, uri: Uri): Book? {
         if (uri == cachedBookUri) {
@@ -298,7 +303,7 @@ object BookUtils {
         return try {
             val book = getBook(context, uri) ?: return null
             val coverImage = book.coverImage ?: return null
-            val safeName = saveName.replace("[^a-zA-Z0-9]".toRegex(), "_")
+            val safeName = saveName.replace(SAFE_FILENAME_REGEX, "_")
             val fileName = "${safeName}_cover.jpg"
             val file = File(context.filesDir, fileName)
             FileOutputStream(file).use { it.write(coverImage.data) }
@@ -311,8 +316,7 @@ object BookUtils {
         // FIX 1: Match 'src', 'href', and 'xlink:href' attributes
         // This is crucial because SVG wrappers in EPUBs often use xlink:href instead of src.
         // We look for any attribute ending in 'href' or 'src'.
-        val pattern = Pattern.compile("(src|href|xlink:href)=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE)
-        val matcher = pattern.matcher(html)
+        val matcher = INJECT_IMAGES_REGEX.matcher(html)
 
         // ⚡ Bolt: Using Matcher.appendReplacement and StringBuffer prevents allocating multiple intermediate
         // large strings in memory for each replacement, reducing CPU usage and GC overhead during HTML parsing.
