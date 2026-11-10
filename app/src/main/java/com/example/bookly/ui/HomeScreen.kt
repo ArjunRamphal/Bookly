@@ -268,7 +268,7 @@ fun BookItem(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .background(Color.LightGray),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
                     if (book.coverImage != null) {
@@ -282,7 +282,7 @@ fun BookItem(
                         Text(
                             text = book.title.take(1).uppercase(),
                             style = MaterialTheme.typography.displayMedium,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

@@ -13,3 +13,7 @@
 ## 2024-05-22 - Missing Screen Reader Context on Generic Interactables
 **Learning:** Using the generic `clickable` modifier on layout components (like `Box` or `Row`) without providing accessibility semantics leaves screen reader users without context. TalkBack will announce it as generic text that can be clicked, but won't explain the action or role.
 **Action:** Always supplement `clickable` modifiers on generic components with an explicit `onClickLabel` and `role` (e.g., `Role.Button`) to ensure proper context and expectations for screen reader users.
+
+## 2024-05-23 - Jetpack Compose Color Contrast and Dark Mode Compatibility
+**Learning:** Using fixed colors (like `Color.LightGray` and `Color.White`) for UI components (like placeholders) can lead to poor contrast in certain themes (e.g., Light Mode) and complete invisibility or visual bugs in Dark Mode.
+**Action:** Always use semantic theme colors (e.g., `MaterialTheme.colorScheme.surfaceVariant` for backgrounds and `MaterialTheme.colorScheme.onSurfaceVariant` for text/icons on that background) to ensure accessible contrast ratios and automatic adaptation across all device themes.
