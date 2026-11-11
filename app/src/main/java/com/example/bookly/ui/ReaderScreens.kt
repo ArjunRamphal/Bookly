@@ -178,9 +178,12 @@ fun EpubReaderScreen(
     // Prepare HTML with CSS injection for Custom Fonts
     val finalHtml = remember(htmlContent, selectedFont) {
         val content = htmlContent ?: ""
-        if (selectedFont == null) {
+        val currentFont = selectedFont
+        if (currentFont == null) {
             content
         } else {
+            // 🛡️ Sentinel: Escape unsafe characters to prevent HTML/CSS injection while preserving file paths/names
+            val safeFontName = currentFont.replace("'", "%27").replace("<", "%3C")
             """
             <html>
             <head>
@@ -188,7 +191,7 @@ fun EpubReaderScreen(
             <style>
                 @font-face {
                     font-family: 'CustomFont';
-                    src: url('$selectedFont');
+                    src: url('$safeFontName');
                 }
                 body, p, div, span, h1, h2, h3, h4, h5, h6 {
                     font-family: 'CustomFont', sans-serif !important;
