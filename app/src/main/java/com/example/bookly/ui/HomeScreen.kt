@@ -194,9 +194,9 @@ fun HomeScreen(
                             modifier = Modifier.align(Alignment.Center),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(Icons.Default.SearchOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.Gray)
+                            Icon(Icons.Default.SearchOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("No books found", color = Color.Gray)
+                            Text("No books found", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     } else {
                         EmptyState(padding = PaddingValues(0.dp)) {
@@ -355,7 +355,7 @@ fun BookItem(
                     showDeleteConfirm = true
                 },
                 leadingIcon = {
-                    Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red)
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                 }
             )
         }
@@ -452,7 +452,7 @@ fun BookItem(
                         onDelete(deleteFromDevice)
                         showDeleteConfirm = false
                     },
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) { Text("Delete") }
             },
             dismissButton = {
@@ -473,7 +473,7 @@ fun EmptyState(padding: PaddingValues, onAddClick: () -> Unit) {
             imageVector = Icons.Default.Book,
             contentDescription = null,
             modifier = Modifier.size(64.dp),
-            tint = Color.Gray
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(text = "Your library is empty.", style = MaterialTheme.typography.titleMedium)

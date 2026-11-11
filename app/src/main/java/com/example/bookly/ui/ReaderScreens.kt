@@ -529,7 +529,7 @@ fun EpubReaderScreen(
 
                 if (availableFonts.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                        Text("No custom fonts imported. Go to Settings to add fonts.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Text("No custom fonts imported. Go to Settings to add fonts.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
